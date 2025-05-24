@@ -31,7 +31,7 @@ export default defineUserConfig({
           collapsible: true,
           // 基于项目路径的 .md 或 .html 后缀是可以省略的。前缀可以是相对路径，等同于 `prefix: /reference/bundler/`
           prefix: 'theFirstInternship/',
-          children: ['index', 'testguide1'],
+          children: ['index', 'gain1', 'gain2', 'gain3', 'gain4',],
         },
         {
           text: '第二段实习',
