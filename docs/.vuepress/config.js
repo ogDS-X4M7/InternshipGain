@@ -2,18 +2,70 @@ import { defaultTheme } from '@vuepress/theme-default'
 import { defineUserConfig } from 'vuepress'
 import { viteBundler } from '@vuepress/bundler-vite'
 
+// export default defineUserConfig({
+//   base: '/InternshipGain/',
+//   lang: 'en-US',
+
+//   title: 'VuePress',
+//   description: 'My first VuePress Site',
+
+//   theme: defaultTheme({
+//     logo: 'https://vuejs.press/images/hero.png',
+
+//     navbar: ['/', '/get-started'],
+//   }),
+
+//   bundler: viteBundler(),
+// })
 export default defineUserConfig({
   base: '/InternshipGain/',
-  lang: 'en-US',
-
-  title: 'VuePress',
-  description: 'My first VuePress Site',
-
+  head: [
+    ['link', { rel: 'icon', href: '/bamaofavicon.ico' }] // 指向public目录下的favicon.ico
+  ],
+  lang: 'zh-CN',
+  title: '本小八的实习收获',
+  description: '记小八的首次实习',
   theme: defaultTheme({
-    logo: 'https://vuejs.press/images/hero.png',
+    navbar: [
+      { text: '首页', link: '/' },
+      // { text: '文档', link: '/docs/' },
+      // { text: 'Get Started', link: '/get-started' },
+      // { text: '测试配置在内部的sidebar', link: '/guide/theFirstInternship/README.md' },
+      {
+        text: '实习收获',
+        children: [
+          { text: '第一段实习', link: '/guide/theFirstInternship/' },
+          { text: '未来的第二段实习', link: '' },
+          { text: 'vuepress的简单使用', link: '' }
+        ],
+      },
+      { text: '关于作者', link: 'https://github.com/ogDS-X4M7' },
+    ],
+    // 可折叠的侧边栏
+    sidebar: {
+      '/guide/': [
+        {
+          text: '第一段实习',
+          collapsible: true,
+          // 基于项目路径的 .md 或 .html 后缀是可以省略的。前缀可以是相对路径，等同于 `prefix: /reference/bundler/`
+          prefix: 'theFirstInternship/',
+          children: ['index', 'testguide1'],
+        },
+        {
+          text: '第二段实习',
+          collapsible: true,
+          prefix: 'theSecondInternship/',
+          children: [],
+        },
+        {
+          text: 'Vuepress的简单使用',
+          collapsible: true,
+          prefix: 'useVuepress/',
+          children: ['use_one', 'testguide2', 'testguide3'],
+        },
+      ],
+    },
 
-    navbar: ['/', '/get-started'],
   }),
-
   bundler: viteBundler(),
 })
