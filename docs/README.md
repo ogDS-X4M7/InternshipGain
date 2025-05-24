@@ -37,5 +37,5 @@ footer: MIT Licensed | Copyright © 2018-present VuePress Community
 
 
 
-这是这个文档的首页，如果你想要了解这个文档网站是如何实现的，可以来我的 [github](https://github.com/ogDS-X4M7)查看。
+这是这个文档的首页，如果你想要了解这个文档网站是如何实现的，可以来我的 [github](https://github.com/ogDS-X4M7/InternshipGain)查看。
 
