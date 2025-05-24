@@ -70,7 +70,7 @@
 <p>进入setting-&gt;pages,把里面的Branch从None改为gh-pages,记得点save保存</p>
 <p>然后来到Actions(也许需要等待)就能看到pages buide and development</p>
 <p>点进去deploy就有你的项目部署链接了，进入链接就能看到部署效果，图片没加载出来没关系，后面都使用自己的资源</p>
-<p>到这里我们就完成了新建项目的部署了。另外，vscode有很方便的gui，后续项目更改可以在左侧源代码管理里面右键暂存更改，然后输入消息提交，终端git push origin main推上去即可</p>
+<p>到这里我们就完成了新建项目的部署了。另外，vscode有很方便的GUI，后续项目更改可以在左侧源代码管理里面右键暂存更改，然后输入消息提交，终端git push origin main推上去即可</p>
 </div></template>
 
 
