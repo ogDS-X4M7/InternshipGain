@@ -2,21 +2,6 @@ import { defaultTheme } from '@vuepress/theme-default'
 import { defineUserConfig } from 'vuepress'
 import { viteBundler } from '@vuepress/bundler-vite'
 
-// export default defineUserConfig({
-//   base: '/InternshipGain/',
-//   lang: 'en-US',
-
-//   title: 'VuePress',
-//   description: 'My first VuePress Site',
-
-//   theme: defaultTheme({
-//     logo: 'https://vuejs.press/images/hero.png',
-
-//     navbar: ['/', '/get-started'],
-//   }),
-
-//   bundler: viteBundler(),
-// })
 export default defineUserConfig({
   base: '/InternshipGain/',
   head: [
@@ -35,8 +20,8 @@ export default defineUserConfig({
         text: '实习收获',
         children: [
           { text: '第一段实习', link: '/guide/theFirstInternship/' },
-          { text: '未来的第二段实习', link: '' },
-          { text: 'vuepress的简单使用', link: '' }
+          { text: '未来的第二段实习', link: '/guide/theSecondInternship/' },
+          { text: 'vuepress的简单使用', link: '/guide/useVuepress/' }
         ],
       },
       { text: '关于作者', link: 'https://github.com/ogDS-X4M7' },
@@ -55,13 +40,13 @@ export default defineUserConfig({
           text: '第二段实习',
           collapsible: true,
           prefix: 'theSecondInternship/',
-          children: [],
+          children: ['index'],
         },
         {
           text: 'Vuepress的简单使用',
           collapsible: true,
           prefix: 'useVuepress/',
-          children: ['use_one', 'testguide2', 'testguide3'],
+          children: ['index', 'testguide2', 'testguide3'],
         },
       ],
     },
