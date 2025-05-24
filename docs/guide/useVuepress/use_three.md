@@ -1,4 +1,4 @@
-# 文档的设计
+# 其他文档的设计
 可以开始正式写自己的文档了！设计各个页面，这些是和之前所说的link相匹配的文档。
 ## 文档处理与后续的添加操作方式
 这里我把文档内容都放进/docs/guide里，guide是创建的新文件夹，为了区分各个章节，又创建了theFirstInternship、theSecondInternship、useVuepress，里面放各自的md文件，即为文档。
