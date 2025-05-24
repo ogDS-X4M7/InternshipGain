@@ -31,7 +31,7 @@ footer: MIT Licensed | Copyright © 2018-present VuePress Community
   gap: 20px; /* 卡片间距 */
 }
 .feature-card.wide {
-  flex: 100%; /* 宽卡片占满整行 */
+  flex: 1; /* 卡片平分区域 */
 }
 </style>
 
