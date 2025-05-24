@@ -13,9 +13,6 @@ export default defineUserConfig({
   theme: defaultTheme({
     navbar: [
       { text: '首页', link: '/' },
-      // { text: '文档', link: '/docs/' },
-      // { text: 'Get Started', link: '/get-started' },
-      // { text: '测试配置在内部的sidebar', link: '/guide/theFirstInternship/README.md' },
       {
         text: '实习收获',
         children: [
@@ -46,7 +43,7 @@ export default defineUserConfig({
           text: 'Vuepress的简单使用',
           collapsible: true,
           prefix: 'useVuepress/',
-          children: ['index', 'testguide2', 'testguide3'],
+          children: ['index', 'use_one', 'testguide2', 'testguide3'],
         },
       ],
     },
