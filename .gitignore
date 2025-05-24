@@ -1,0 +1,16 @@
+# 依赖目录
+node_modules/
+
+# 构建输出目录
+docs/.vuepress/dist/
+
+# 环境变量
+.env
+
+# IDE/编辑器配置
+.vscode/
+.idea/
+.DS_Store
+
+# 日志文件
+*.log
