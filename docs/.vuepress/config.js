@@ -5,7 +5,7 @@ import { viteBundler } from '@vuepress/bundler-vite'
 export default defineUserConfig({
   base: '/InternshipGain/',
   head: [
-    ['link', { rel: 'icon', href: '/bamaofavicon.ico' }] // 指向public目录下的favicon.ico
+    ['link', { rel: 'icon', href: '/InternshipGain/bamaofavicon.ico' }] // 指向public目录下的favicon.ico
   ],
   lang: 'zh-CN',
   title: '本小八的实习收获',

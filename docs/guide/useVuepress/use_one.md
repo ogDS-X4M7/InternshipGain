@@ -93,6 +93,6 @@ children则是这个分类所拥有的目录项——md文件，并且后缀(.md
 随后在.vuepress/config.js里的export default defineUserConfig中添加设置即可
 ```
 head: [
-['link', { rel: 'icon', href: '/favicon.ico' }] // 这个写法是指向public目录下的favicon.ico的意思
+['link', { rel: 'icon', href: '/reponame/favicon.ico' }] // 这个写法是指向public目录下的favicon.ico的意思
 ],
 ```
