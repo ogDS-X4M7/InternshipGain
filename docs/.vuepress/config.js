@@ -43,7 +43,7 @@ export default defineUserConfig({
           text: 'Vuepress的简单使用',
           collapsible: true,
           prefix: 'useVuepress/',
-          children: ['index', 'use_one', 'testguide2', 'testguide3'],
+          children: ['index', 'use_one', 'use_two'],
         },
       ],
     },
