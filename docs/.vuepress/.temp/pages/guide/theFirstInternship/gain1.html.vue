@@ -1,5 +1,5 @@
 <template><div><h1 id="收获二-熟悉团队协作流程与git" tabindex="-1"><a class="header-anchor" href="#收获二-熟悉团队协作流程与git"><span>收获二：熟悉团队协作流程与Git</span></a></h1>
-<p>为了参与大型项目，团队开发，使用了阿里云的云效代码管理，在这个过程中主要熟悉了git操作，对自己完整的工作进行新建分支，申请合并，熟悉团队协作的流程。</p>
+<p>为了参与大型项目，团队开发，使用了阿里云的云效代码管理，在这个过程中主要熟悉了 <code v-pre>git</code> 操作，对自己完整的工作进行新建分支，申请合并，熟悉团队协作的流程。</p>
 <h2 id="常用到的git命令以及含义" tabindex="-1"><a class="header-anchor" href="#常用到的git命令以及含义"><span>常用到的git命令以及含义</span></a></h2>
 <p>拉取克隆项目代码到本地：</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">git clone https://xxxxxx(项目的克隆链接)</span>
