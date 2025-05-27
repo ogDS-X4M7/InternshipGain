@@ -85,11 +85,17 @@
 <p><code v-pre>prefix</code>设置前缀路径，</p>
 <p><code v-pre>children</code>则是这个分类所拥有的目录项——md文件，并且后缀(.md、.html)可省略</p>
 <h2 id="不太重要的小内容" tabindex="-1"><a class="header-anchor" href="#不太重要的小内容"><span>不太重要的小内容</span></a></h2>
-<p>毕竟聊到<code v-pre>.vuepress/config.js</code>了，就顺便写一下关于<code v-pre>favicon</code>图标修改的实现，是在<code v-pre>.vuepress</code>下创建<code v-pre>public</code>文件夹，里面存放好准备好的<code v-pre>favicon</code>图标，
+<p>毕竟聊到<code v-pre>.vuepress/config.js</code>了，就顺便写一下关于<code v-pre>favicon</code>图标修改的实现和项目运行自动打开页面的配置，图标修改是在<code v-pre>.vuepress</code>下创建<code v-pre>public</code>文件夹，里面存放好准备好的<code v-pre>favicon</code>图标，
 随后在<code v-pre>.vuepress/config.js</code>里的<code v-pre>export default defineUserConfig</code>中添加设置即可</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">head: [</span>
-<span class="line">['link', { rel: 'icon', href: '/你的github仓库名/favicon.ico' }] // 这个写法是指向public目录下的favicon.ico的意思</span>
+<span class="line">  ['link', { rel: 'icon', href: '/你的github仓库名/favicon.ico' }] </span>
+<span class="line">  // 这个写法是指向public目录下的favicon.ico的意思</span>
 <span class="line">],</span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>项目运行自动打开需要在<code v-pre>package.json</code>中配置，加上<code v-pre>--open</code>：</p>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">"scripts": {</span>
+<span class="line">  "docs:dev": "vuepress dev docs --open",</span>
+<span class="line">},</span>
 <span class="line"></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div></div></template>
 

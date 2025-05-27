@@ -89,10 +89,17 @@ sidebar: {
 `children`则是这个分类所拥有的目录项——md文件，并且后缀(.md、.html)可省略
 
 ## 不太重要的小内容
-毕竟聊到`.vuepress/config.js`了，就顺便写一下关于`favicon`图标修改的实现，是在`.vuepress`下创建`public`文件夹，里面存放好准备好的`favicon`图标，
+毕竟聊到`.vuepress/config.js`了，就顺便写一下关于`favicon`图标修改的实现和项目运行自动打开页面的配置，图标修改是在`.vuepress`下创建`public`文件夹，里面存放好准备好的`favicon`图标，
 随后在`.vuepress/config.js`里的`export default defineUserConfig`中添加设置即可
 ```
 head: [
-['link', { rel: 'icon', href: '/你的github仓库名/favicon.ico' }] // 这个写法是指向public目录下的favicon.ico的意思
+  ['link', { rel: 'icon', href: '/你的github仓库名/favicon.ico' }] 
+  // 这个写法是指向public目录下的favicon.ico的意思
 ],
+```
+项目运行自动打开需要在`package.json`中配置，加上`--open`：
+```
+"scripts": {
+  "docs:dev": "vuepress dev docs --open",
+},
 ```

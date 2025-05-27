@@ -10,8 +10,72 @@
 
 不过两个页面仍然存在差别，`页面A`的操作栏是只有一个项目进行批量修改，需求的页面有两个选项，于是还需要有一个判断，选择是对资金进行批量修改还是对积分进行批量修改，于是我使用了*element-plus*的气泡确认框，结合自定义弹出框的内容和点击按钮触发事件，设计一个气泡框，操作流程和`页面A`差不多，点击操作栏时，弹出气泡框，自定义气泡框文本内容是询问操作者要批量修改什么内容，并将确认和取消的两个选项修改为用户资金和用户积分，选择后弹出相应的修改消息框以供操作者输入修改后的值，如果用户输入且值合理，调用批量修改的接口，完成批量修改。
 
+找到操作栏所在部分代码：
+```
+<el-table-column align="center" fixed="right" :label="t('操作')" width="180">
+    <template #default="{ row }">
+        <el-button v-permissions="{ permission: ['/manage/pay/userResource/edit'] }" style="margin-right: 15px" text @click="MoneyShow(row)">{{ t('修改资金')}}</el-button>
+        <el-button v-permissions="{ permission: ['/manage/pay/userResource/edit'] }" text @click="PointsShow(row)">{{ t('修改积分') }}</el-button>
+    </template>
+</el-table-column>
+```
+对表格该列头部，即`el-table-column`增加`<template #header="scope" >`：
+```
+<template #header="scope" >
+    <el-popconfirm
+      placement="top"
+      title="选择批量操作对象?"
+      width="220"
+      @cancel="operateMoney"
+      @confirm="operatePoints"
+    >
+        <template #reference>
+            <span style="cursor:pointer;" :title="t('批量设置选择')">{{scope.column.label}}<ms-icon data-key="item_market_price" icon="more-2-line" /></span>
+        </template>
+        <template #actions="{ confirm, cancel }">
+            <el-button size="small" type="primary" @click="cancel">客户资金</el-button>
+            <el-button
+              size="small"
+              type="danger"
+              @click="confirm"
+            >
+                客户积分
+            </el-button>
+        </template>
+    </el-popconfirm>
+</template>
+```
+下方添加增加的相应函数处理：
+```
+const operateMoney = ()=>{
+    ElMessageBox.prompt(t('批量设置客户资金'), {
+        confirmButtonText: t('确定'),
+        cancelButtonText: t('取消'),
+    })
+        .then(({ value }) => {
+          if (value) {
+            //调用接口
+          }
+        })
+        .catch(() => {})
+    }
+
+    const operatePoints = ()=>{
+      ElMessageBox.prompt(t('批量设置客户积分'), {
+        confirmButtonText: t('确定'),
+        cancelButtonText: t('取消'),
+      })
+        .then(({ value }) => {
+          if (value) {
+            //调用接口
+          }
+        })
+        .catch(() => {})
+    }
+```
+
 ## 另外的需求与完成
-关于这个项目后续其实还做了一个需求，不够因为是在太过简单，就不单开一页写了，直接在这里记录。
+关于这个项目后续其实还做了一个需求，不过因为比较简单，就不单开一页写了，直接在这里记录。
 
 新的需求只是在用户发布商品信息时，把一个单选选项的默认项从第一项改为第二项，非常简单。
 
