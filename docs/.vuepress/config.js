@@ -11,6 +11,7 @@ export default defineUserConfig({
   title: '本小八的实习收获',
   description: '记小八的首次实习',
   theme: defaultTheme({
+    contributors: false,
     navbar: [
       { text: '首页', link: '/' },
       {
