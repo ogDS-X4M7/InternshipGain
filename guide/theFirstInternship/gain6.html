@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="generator" content="VuePress 2.0.0-rc.20" />
+    <style>
+      :root {
+        --vp-c-bg: #fff;
+      }
+
+      [data-theme='dark'] {
+        --vp-c-bg: #1b1b1f;
+      }
+
+      html,
+      body {
+        background-color: var(--vp-c-bg);
+      }
+    </style>
+    <script>
+      const useChoice = localStorage.getItem('vuepress-color-scheme')
+      const systemStatus =
+        'matchMedia' in window
+          ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          : false
+
+      if (useChoice === 'light') {
+        document.documentElement.dataset.theme = 'light'
+      } else if (useChoice === 'dark' || systemStatus) {
+        document.documentElement.dataset.theme = 'dark'
+      }
+    </script>
+    <link rel="icon" href="/InternshipGain/bamaofavicon.ico"><title>收获三——实现Excel导出工具 | 本小八的实习收获</title><meta name="description" content="记小八的首次实习">
+    <link rel="preload" href="/InternshipGain/assets/style--gozyiKw.css" as="style"><link rel="stylesheet" href="/InternshipGain/assets/style--gozyiKw.css">
+    <link rel="modulepreload" href="/InternshipGain/assets/app-B05S7fmk.js"><link rel="modulepreload" href="/InternshipGain/assets/gain6.html-5dvR4tu2.js">
+    <link rel="prefetch" href="/InternshipGain/assets/index.html-GcLEETXE.js" as="script"><link rel="prefetch" href="/InternshipGain/assets/index.html-sysBAYqX.js" as="script"><link rel="prefetch" href="/InternshipGain/assets/gain1.html-BC7Uvj5I.js" as="script"><link rel="prefetch" href="/InternshipGain/assets/gain2.html-D55zThXA.js" as="script"><link rel="prefetch" href="/InternshipGain/assets/gain3.html-CTTgZ_VL.js" as="script"><link rel="prefetch" href="/InternshipGain/assets/gain4.html-CBp9aABP.js" as="script"><link rel="prefetch" href="/InternshipGain/assets/gain5.html-DReHKj0_.js" as="script"><link rel="prefetch" href="/InternshipGain/assets/index.html-DV6GS9ZH.js" as="script"><link rel="prefetch" href="/InternshipGain/assets/index.html-BXi51cuL.js" as="script"><link rel="prefetch" href="/InternshipGain/assets/use_one.html-B9vy7U0N.js" as="script"><link rel="prefetch" href="/InternshipGain/assets/use_three.html-RXqKb5ox.js" as="script"><link rel="prefetch" href="/InternshipGain/assets/use_two.html-k_JT8Bpf.js" as="script"><link rel="prefetch" href="/InternshipGain/assets/404.html-CMVELu1Y.js" as="script">
+  </head>
+  <body>
+    <div id="app"><!--[--><div class="vp-theme-container external-link-icon" vp-container><!--[--><header class="vp-navbar" vp-navbar><div class="vp-toggle-sidebar-button" title="toggle sidebar" aria-expanded="false" role="button" tabindex="0"><div class="icon" aria-hidden="true"><span></span><span></span><span></span></div></div><span><a class="route-link" href="/InternshipGain/"><!----><span class="vp-site-name" aria-hidden="true">本小八的实习收获</span></a></span><div class="vp-navbar-items-wrapper" style=""><!--[--><!--]--><nav class="vp-navbar-items vp-hide-mobile" aria-label="site navigation"><!--[--><div class="vp-navbar-item"><a class="route-link auto-link" href="/InternshipGain/" aria-label="首页"><!--[--><!--[--><!--]--><!--]-->首页<!--[--><!--[--><!--]--><!--]--></a></div><div class="vp-navbar-item"><div class="vp-navbar-dropdown-wrapper"><button class="vp-navbar-dropdown-title" type="button" aria-label="实习收获"><span class="title">实习收获</span><span class="arrow down"></span></button><button class="vp-navbar-dropdown-title-mobile" type="button" aria-label="实习收获"><span class="title">实习收获</span><span class="right arrow"></span></button><ul style="display:none;" class="vp-navbar-dropdown"><!--[--><li class="vp-navbar-dropdown-item"><a class="route-link route-link-active auto-link" href="/InternshipGain/guide/theFirstInternship/" aria-label="第一段实习"><!--[--><!--[--><!--]--><!--]-->第一段实习<!--[--><!--[--><!--]--><!--]--></a></li><li class="vp-navbar-dropdown-item"><a class="route-link auto-link" href="/InternshipGain/guide/theSecondInternship/" aria-label="未来的第二段实习"><!--[--><!--[--><!--]--><!--]-->未来的第二段实习<!--[--><!--[--><!--]--><!--]--></a></li><li class="vp-navbar-dropdown-item"><a class="route-link auto-link" href="/InternshipGain/guide/useVuepress/" aria-label="vuepress的简单使用"><!--[--><!--[--><!--]--><!--]-->vuepress的简单使用<!--[--><!--[--><!--]--><!--]--></a></li><!--]--></ul></div></div><div class="vp-navbar-item"><a class="auto-link external-link" href="https://github.com/ogDS-X4M7" aria-label="关于作者" rel="noopener noreferrer" target="_blank"><!--[--><!--[--><!--]--><!--]-->关于作者<!--[--><!--[--><!--]--><!--]--></a></div><!--]--></nav><!--[--><!--]--><button type="button" class="vp-toggle-color-mode-button" title="toggle color mode"><svg class="light-icon" viewbox="0 0 32 32" style=""><path d="M16 12.005a4 4 0 1 1-4 4a4.005 4.005 0 0 1 4-4m0-2a6 6 0 1 0 6 6a6 6 0 0 0-6-6z" fill="currentColor"></path><path d="M5.394 6.813l1.414-1.415l3.506 3.506L8.9 10.318z" fill="currentColor"></path><path d="M2 15.005h5v2H2z" fill="currentColor"></path><path d="M5.394 25.197L8.9 21.691l1.414 1.415l-3.506 3.505z" fill="currentColor"></path><path d="M15 25.005h2v5h-2z" fill="currentColor"></path><path d="M21.687 23.106l1.414-1.415l3.506 3.506l-1.414 1.414z" fill="currentColor"></path><path d="M25 15.005h5v2h-5z" fill="currentColor"></path><path d="M21.687 8.904l3.506-3.506l1.414 1.415l-3.506 3.505z" fill="currentColor"></path><path d="M15 2.005h2v5h-2z" fill="currentColor"></path></svg><svg class="dark-icon" viewbox="0 0 32 32" style="display:none;"><path d="M13.502 5.414a15.075 15.075 0 0 0 11.594 18.194a11.113 11.113 0 0 1-7.975 3.39c-.138 0-.278.005-.418 0a11.094 11.094 0 0 1-3.2-21.584M14.98 3a1.002 1.002 0 0 0-.175.016a13.096 13.096 0 0 0 1.825 25.981c.164.006.328 0 .49 0a13.072 13.072 0 0 0 10.703-5.555a1.01 1.01 0 0 0-.783-1.565A13.08 13.08 0 0 1 15.89 4.38A1.015 1.015 0 0 0 14.98 3z" fill="currentColor"></path></svg></button><!----></div></header><!--]--><div class="vp-sidebar-mask"></div><!--[--><aside class="vp-sidebar" vp-sidebar><nav class="vp-navbar-items" aria-label="site navigation"><!--[--><div class="vp-navbar-item"><a class="route-link auto-link" href="/InternshipGain/" aria-label="首页"><!--[--><!--[--><!--]--><!--]-->首页<!--[--><!--[--><!--]--><!--]--></a></div><div class="vp-navbar-item"><div class="vp-navbar-dropdown-wrapper"><button class="vp-navbar-dropdown-title" type="button" aria-label="实习收获"><span class="title">实习收获</span><span class="arrow down"></span></button><button class="vp-navbar-dropdown-title-mobile" type="button" aria-label="实习收获"><span class="title">实习收获</span><span class="right arrow"></span></button><ul style="display:none;" class="vp-navbar-dropdown"><!--[--><li class="vp-navbar-dropdown-item"><a class="route-link route-link-active auto-link" href="/InternshipGain/guide/theFirstInternship/" aria-label="第一段实习"><!--[--><!--[--><!--]--><!--]-->第一段实习<!--[--><!--[--><!--]--><!--]--></a></li><li class="vp-navbar-dropdown-item"><a class="route-link auto-link" href="/InternshipGain/guide/theSecondInternship/" aria-label="未来的第二段实习"><!--[--><!--[--><!--]--><!--]-->未来的第二段实习<!--[--><!--[--><!--]--><!--]--></a></li><li class="vp-navbar-dropdown-item"><a class="route-link auto-link" href="/InternshipGain/guide/useVuepress/" aria-label="vuepress的简单使用"><!--[--><!--[--><!--]--><!--]-->vuepress的简单使用<!--[--><!--[--><!--]--><!--]--></a></li><!--]--></ul></div></div><div class="vp-navbar-item"><a class="auto-link external-link" href="https://github.com/ogDS-X4M7" aria-label="关于作者" rel="noopener noreferrer" target="_blank"><!--[--><!--[--><!--]--><!--]-->关于作者<!--[--><!--[--><!--]--><!--]--></a></div><!--]--></nav><!--[--><!--]--><ul class="vp-sidebar-items"><!--[--><li><p tabindex="0" class="vp-sidebar-item vp-sidebar-heading active collapsible">第一段实习 <span class="down arrow"></span></p><ul style="" class="vp-sidebar-children"><!--[--><li><a class="route-link route-link-active auto-link vp-sidebar-item" href="/InternshipGain/guide/theFirstInternship/" aria-label="收获一：Vue项目中@路径别名配置"><!--[--><!--[--><!--]--><!--]-->收获一：Vue项目中@路径别名配置<!--[--><!--[--><!--]--><!--]--></a><!----></li><li><a class="route-link auto-link vp-sidebar-item" href="/InternshipGain/guide/theFirstInternship/gain1.html" aria-label="收获二：熟悉团队协作流程与Git"><!--[--><!--[--><!--]--><!--]-->收获二：熟悉团队协作流程与Git<!--[--><!--[--><!--]--><!--]--></a><!----></li><li><a class="route-link auto-link vp-sidebar-item" href="/InternshipGain/guide/theFirstInternship/gain2.html" aria-label="快速上手项目一——批量处理数据"><!--[--><!--[--><!--]--><!--]-->快速上手项目一——批量处理数据<!--[--><!--[--><!--]--><!--]--></a><!----></li><li><a class="route-link auto-link vp-sidebar-item" href="/InternshipGain/guide/theFirstInternship/gain3.html" aria-label="快速上手项目二——页面信息展示"><!--[--><!--[--><!--]--><!--]-->快速上手项目二——页面信息展示<!--[--><!--[--><!--]--><!--]--></a><!----></li><li><a class="route-link auto-link vp-sidebar-item" href="/InternshipGain/guide/theFirstInternship/gain4.html" aria-label="快速上手项目三——登录后查看内容"><!--[--><!--[--><!--]--><!--]-->快速上手项目三——登录后查看内容<!--[--><!--[--><!--]--><!--]--></a><!----></li><li><a class="route-link auto-link vp-sidebar-item" href="/InternshipGain/guide/theFirstInternship/gain5.html" aria-label="项目一——导出商品列表"><!--[--><!--[--><!--]--><!--]-->项目一——导出商品列表<!--[--><!--[--><!--]--><!--]--></a><!----></li><li><a class="route-link route-link-active auto-link vp-sidebar-item active" href="/InternshipGain/guide/theFirstInternship/gain6.html" aria-label="收获三——实现Excel导出工具"><!--[--><!--[--><!--]--><!--]-->收获三——实现Excel导出工具<!--[--><!--[--><!--]--><!--]--></a><!----></li><!--]--></ul></li><li><p tabindex="0" class="vp-sidebar-item vp-sidebar-heading collapsible">第二段实习 <span class="right arrow"></span></p><ul style="display:none;" class="vp-sidebar-children"><!--[--><li><a class="route-link auto-link vp-sidebar-item" href="/InternshipGain/guide/theSecondInternship/" aria-label="暂未开始，敬请期待"><!--[--><!--[--><!--]--><!--]-->暂未开始，敬请期待<!--[--><!--[--><!--]--><!--]--></a><!----></li><!--]--></ul></li><li><p tabindex="0" class="vp-sidebar-item vp-sidebar-heading collapsible">Vuepress的简单使用 <span class="right arrow"></span></p><ul style="display:none;" class="vp-sidebar-children"><!--[--><li><a class="route-link auto-link vp-sidebar-item" href="/InternshipGain/guide/useVuepress/" aria-label="快速开始一个新项目并完成部署"><!--[--><!--[--><!--]--><!--]-->快速开始一个新项目并完成部署<!--[--><!--[--><!--]--><!--]--></a><!----></li><li><a class="route-link auto-link vp-sidebar-item" href="/InternshipGain/guide/useVuepress/use_one.html" aria-label="代码的简单整体解读——config.js"><!--[--><!--[--><!--]--><!--]-->代码的简单整体解读——config.js<!--[--><!--[--><!--]--><!--]--></a><!----></li><li><a class="route-link auto-link vp-sidebar-item" href="/InternshipGain/guide/useVuepress/use_two.html" aria-label="代码的简单整体解读——首页"><!--[--><!--[--><!--]--><!--]-->代码的简单整体解读——首页<!--[--><!--[--><!--]--><!--]--></a><!----></li><li><a class="route-link auto-link vp-sidebar-item" href="/InternshipGain/guide/useVuepress/use_three.html" aria-label="其他文档的设计"><!--[--><!--[--><!--]--><!--]-->其他文档的设计<!--[--><!--[--><!--]--><!--]--></a><!----></li><!--]--></ul></li><!--]--></ul><!--[--><!--]--></aside><!--]--><!--[--><main class="vp-page"><!--[--><!--]--><div vp-content><!--[--><!--]--><div><h1 id="收获三——实现excel导出工具" tabindex="-1"><a class="header-anchor" href="#收获三——实现excel导出工具"><span>收获三——实现Excel导出工具</span></a></h1><h2 id="核心依赖库" tabindex="-1"><a class="header-anchor" href="#核心依赖库"><span>核心依赖库</span></a></h2><p><code>file-saver</code>：</p><p>功能：实现文件保存到本地的功能，提供<code>saveAs</code>方法。</p><p><code>xlsx</code>：</p><p>功能：操作<code>Excel</code>文件的核心库，包含解析、生成<code>Excel</code>的工具函数（如<code>utils</code>、<code>write</code>）。</p><p><code>utils</code>：提供了一系列用于<em>转换数据格式</em>和<em>操作工作表</em>的工具函数。可以看到这个库使用了三个方法：<code>utils.encode_cell</code>、<code>utils.encode_range</code>、<code>utils.decode_range</code>，都是用于<em>处理单元格地址和区域</em>的核心工具函数。</p><p><code>write</code>：用于将工作表数据转换为不同格式的文件内容，支持多种输出格式，在这里都生成的是二进制文件。</p><p><code>SSF</code>：用于处理<code>Excel</code>日期格式的模块。</p><p><code>BookType</code>：定义<code>Excel</code>文件类型（如<code>xlsx</code>、<code>xls</code>）</p><h2 id="各部分函数解析" tabindex="-1"><a class="header-anchor" href="#各部分函数解析"><span>各部分函数解析</span></a></h2><h3 id="基本信息" tabindex="-1"><a class="header-anchor" href="#基本信息"><span>基本信息</span></a></h3><p>因为内容较多，在这里先讲解使用到的<code>export_json_to_excel</code>：</p><h3 id="export-json-to-excel" tabindex="-1"><a class="header-anchor" href="#export-json-to-excel"><span>export_json_to_excel</span></a></h3><h4 id="函数参数与默认值" tabindex="-1"><a class="header-anchor" href="#函数参数与默认值"><span>函数参数与默认值</span></a></h4><p>首先是函数的参数和默认值，这在<a class="route-link" href="/InternshipGain/guide/theFirstInternship/gain5.html#%E4%BA%86%E8%A7%A3%E6%96%B9%E6%B3%95%E5%92%8C%E5%8F%82%E6%95%B0">之前的文档</a>里也有讲解</p><div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre><code><span class="line">export function export_json_to_excel(</span>
+<span class="line">  {</span>
+<span class="line">    multiHeader = [],       // 多级表头（数组，如 [[{label: &#39;一级&#39;}, {label: &#39;二级&#39;}]]）</span>
+<span class="line">    header,                 // 单级表头（数组，如 [&#39;字段1&#39;, &#39;字段2&#39;]）</span>
+<span class="line">    data,                   // 数据主体（数组，如 [{key: val}, ...]）</span>
+<span class="line">    filename,               // 文件名（字符串）</span>
+<span class="line">    merges = [],            // 合并单元格范围（数组，如 [&#39;A1:B2&#39;, &#39;C3:D3&#39;]）</span>
+<span class="line">    autoWidth = true,       // 是否自动计算列宽（布尔值）</span>
+<span class="line">    bookType = &#39;xlsx&#39;,      // 文件类型（&#39;xlsx&#39;/&#39;xls&#39;/&#39;csv&#39;等）</span>
+<span class="line">  } = { </span>
+<span class="line">    header: {},            // 默认空对象（需修正为数组，可能是代码笔误）</span>
+<span class="line">    data: [] as any[],      // 默认空数组</span>
+<span class="line">    filename: &#39;&#39;            // 默认文件名</span>
+<span class="line">  }</span>
+<span class="line">) { ... }</span>
+<span class="line"></span></code></pre><div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0;"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="数据预处理" tabindex="-1"><a class="header-anchor" href="#数据预处理"><span>数据预处理</span></a></h4><p>接下来是数据预处理，组装表头和数据：</p><div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre><code><span class="line">filename = filename || &#39;excel-list&#39; // 处理默认文件名</span>
+<span class="line">data = [...data] // 复制原始数据，避免修改源数据</span>
+<span class="line">data.unshift(header) // 将单级表头插入数据顶部（作为第一行）</span>
+<span class="line"></span>
+<span class="line">// 插入多级表头（从最后一级到第一级，保持层级顺序）</span>
+<span class="line">for (let i = multiHeader.length - 1; i &gt; -1; i--) {</span>
+<span class="line">  data.unshift(multiHeader[i])</span>
+<span class="line">}</span>
+<span class="line"></span></code></pre><div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0;"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>注意这里把表头、多级表头插入到data前面，说明表头数据也是放到data中一起进行处理的</p><h4 id="生成工作表-worksheet" tabindex="-1"><a class="header-anchor" href="#生成工作表-worksheet"><span>生成工作表（Worksheet）</span></a></h4><p>这部分主要是调用<code>sheet_from_array_of_arrays</code>函数，将<code>data</code>转换为<code>xlsx</code>所需的<code>Worksheet</code>对象，具体实现看关于<code>sheet_from_array_of_arrays</code>函数的讲解部分</p><div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre><code><span class="line">const wsName = &#39;SheetJS&#39;</span>
+<span class="line">const wb = new Workbook()</span>
+<span class="line">const ws = sheet_from_array_of_arrays(data) // 将二维数组转为工作表</span>
+<span class="line"></span></code></pre><div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0;"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="合并单元格处理" tabindex="-1"><a class="header-anchor" href="#合并单元格处理"><span>合并单元格处理</span></a></h4><p>这部分是对单元格进行合并，虽然我导出的列表没有用到，但通过举例就能讲清楚它的作用：</p><div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre><code><span class="line">if (merges.length &gt; 0) {</span>
+<span class="line">  if (!ws[&#39;!merges&#39;]) ws[&#39;!merges&#39;] = [] // 初始化合并范围数组</span>
+<span class="line">  merges.forEach((item) =&gt; {</span>
+<span class="line">    ws[&#39;!merges&#39;].push(utils.decode_range(item)) // 将字符串范围转为对象</span>
+<span class="line">  })</span>
+<span class="line">}</span>
+<span class="line"></span></code></pre><div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0;"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>想要合并，需要调用方法时就传入合并规则，比如存在这种情况：</p><p>希望产品信息合并1-3三个单元格，销售信息合并4-5两个单元格。</p><p>那么就会设置A1-C1合并，D1-E1合并，最后调用时传入合并规则：</p><div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre><code><span class="line">const multiHeader = [</span>
+<span class="line">  [&#39;产品信息&#39;, null, null, &#39;销售信息&#39;, null], // 第一行（合并后显示）</span>
+<span class="line">  [&#39;编码&#39;, &#39;名称&#39;, &#39;单价&#39;, &#39;销量&#39;, &#39;状态&#39;]    // 第二行</span>
+<span class="line">];</span>
+<span class="line">const merges = [&#39;A1:C1&#39;, &#39;D1:E1&#39;];</span>
+<span class="line">...</span>
+<span class="line">export_json_to_excel({</span>
+<span class="line">  multiHeader,</span>
+<span class="line">  ...</span>
+<span class="line">  merges, // 传入合并规则</span>
+<span class="line">});</span>
+<span class="line"></span></code></pre><div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0;"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="自动列宽计算" tabindex="-1"><a class="header-anchor" href="#自动列宽计算"><span>自动列宽计算</span></a></h4><p>这部分是根据该列所有行的内容自动调整列宽，避免内容截断</p><div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre><code><span class="line">if (autoWidth) {</span>
+<span class="line">  // 1. 计算每列每一行的宽度</span>
+<span class="line">  const colWidth = data.map((row) =&gt; </span>
+<span class="line">    row.map((val) =&gt; {</span>
+<span class="line">      if (val === null) return { wch: 10 } // 空值默认宽度10</span>
+<span class="line">      const str = val.toString()</span>
+<span class="line">      // 判断是否为双字节字符（如中文）</span>
+<span class="line">      const isDoubleByte = str.charCodeAt(0) &gt; 255 </span>
+<span class="line">      return { wch: isDoubleByte ? str.length * 2 : str.length }</span>
+<span class="line">    })</span>
+<span class="line">  )</span>
+<span class="line"></span>
+<span class="line">  // 2. 取每列的最大宽度</span>
+<span class="line">  const result = colWidth[0].slice() // 以第一行宽度为初始值</span>
+<span class="line">  for (let i = 1; i &lt; colWidth.length; i++) {</span>
+<span class="line">    for (let j = 0; j &lt; colWidth[i].length; j++) {</span>
+<span class="line">      if (result[j].wch &lt; colWidth[i][j].wch) {</span>
+<span class="line">        result[j].wch = colWidth[i][j].wch // 覆盖为更大值</span>
+<span class="line">      }</span>
+<span class="line">    }</span>
+<span class="line">  }</span>
+<span class="line"></span>
+<span class="line">  // 3. 应用列宽到工作表</span>
+<span class="line">  ws[&#39;!cols&#39;] = result</span>
+<span class="line">}</span>
+<span class="line"></span></code></pre><div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0;"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>具体实现逻辑都在代码中用注释标明，具体再讲一些：</p><p>单位<code>wch</code>：表示列宽，<code>Excel</code>中<code>1</code>个字符宽度约等于<code>7</code>像素。</p><p>提到的双字节字符处理，是因为中文、日文等字符占用<code>2</code>个字符宽度，因此<code>str.length * 2</code>。而英文、数字等单字节字符占用 1 个字符宽度。</p><p>关于<code>ws[&#39;!cols&#39;]</code>：在<code>SheetJS</code>（即<code>XLSX</code>库）中，<code>!cols</code> 是工作表（<code>Sheet</code>）对象的一个特殊属性，用于存储列宽配置。它是<code>SheetJS</code>约定的内部属性名，用于标识列宽信息，类似的还有<code>!merges</code>（合并单元格）、<code>!rows</code>（行高）等以<code>!</code>开头的元数据属性。</p><h4 id="生成文件并下载" tabindex="-1"><a class="header-anchor" href="#生成文件并下载"><span>生成文件并下载</span></a></h4><p>经过上面对数据的处理，这部分就只是调用函数生成文件并下载了：</p><p><code>write(wb, options)</code>：使用<code>xlsx</code>库将工作簿（<code>wb</code>）转为指定格式的二进制数据。 <code>s2ab(wbout)</code>：将二进制字符串转为<code>ArrayBuffer</code>，用于创建<code>Blob</code>对象。 <code>saveAs</code>：通过<code>file-saver</code>库触发浏览器下载。</p><div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre><code><span class="line">wb.SheetNames.push(wsName) // 添加工作表名称</span>
+<span class="line">wb.Sheets[wsName] = ws // 将工作表添加到工作簿</span>
+<span class="line"></span>
+<span class="line">// 生成二进制数据</span>
+<span class="line">const wbout = write(wb, {</span>
+<span class="line">  bookType: bookType as BookType, // 文件类型</span>
+<span class="line">  bookSST: false, // 是否生成共享字符串表（默认false）</span>
+<span class="line">  type: &#39;binary&#39; // 输出类型为二进制字符串</span>
+<span class="line">})</span>
+<span class="line"></span>
+<span class="line">// 保存文件</span>
+<span class="line">saveAs(</span>
+<span class="line">  new Blob([s2ab(wbout)], { type: &#39;application/octet-stream&#39; }),</span>
+<span class="line">  `${filename}.${bookType}`</span>
+<span class="line">)</span>
+<span class="line"></span></code></pre><div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0;"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h2 id="工具的总体实现" tabindex="-1"><a class="header-anchor" href="#工具的总体实现"><span>工具的总体实现</span></a></h2><div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre><code><span class="line">import { saveAs } from &#39;file-saver&#39;</span>
+<span class="line">import { utils, SSF, write, BookType } from &#39;xlsx&#39;</span>
+<span class="line"></span>
+<span class="line">function generateArray(table: any) {</span>
+<span class="line">  const out: any[] = []</span>
+<span class="line">  const rows = table.querySelectorAll(&#39;tr&#39;)</span>
+<span class="line">  const ranges: any[] = []</span>
+<span class="line">  for (let R = 0; R &lt; rows.length; ++R) {</span>
+<span class="line">    const outRow: any[] = []</span>
+<span class="line">    const row = rows[R]</span>
+<span class="line">    const columns = row.querySelectorAll(&#39;td&#39;)</span>
+<span class="line">    for (const cell of columns) {</span>
+<span class="line">      let colspan = cell.getAttribute(&#39;colspan&#39;)</span>
+<span class="line">      let rowspan = cell.getAttribute(&#39;rowspan&#39;)</span>
+<span class="line">      let cellValue = cell.innerText</span>
+<span class="line">      if (cellValue !== &#39;&#39; &amp;&amp; cellValue === +cellValue) cellValue = +cellValue</span>
+<span class="line">      ranges.forEach((range) =&gt; {</span>
+<span class="line">        if (</span>
+<span class="line">          R &gt;= range.s.r &amp;&amp;</span>
+<span class="line">          R &lt;= range.e.r &amp;&amp;</span>
+<span class="line">          outRow.length &gt;= range.s.c &amp;&amp;</span>
+<span class="line">          outRow.length &lt;= range.e.c</span>
+<span class="line">        ) {</span>
+<span class="line">          for (let i = 0; i &lt;= range.e.c - range.s.c; ++i) outRow.push(null)</span>
+<span class="line">        }</span>
+<span class="line">      })</span>
+<span class="line">      if (rowspan || colspan) {</span>
+<span class="line">        rowspan = rowspan || 1</span>
+<span class="line">        colspan = colspan || 1</span>
+<span class="line">        ranges.push({</span>
+<span class="line">          s: {</span>
+<span class="line">            r: R,</span>
+<span class="line">            c: outRow.length,</span>
+<span class="line">          },</span>
+<span class="line">          e: {</span>
+<span class="line">            r: R + rowspan - 1,</span>
+<span class="line">            c: outRow.length + colspan - 1,</span>
+<span class="line">          },</span>
+<span class="line">        })</span>
+<span class="line">      }</span>
+<span class="line"></span>
+<span class="line">      outRow.push(cellValue !== &#39;&#39; ? cellValue : null)</span>
+<span class="line"></span>
+<span class="line">      if (colspan) for (let k = 0; k &lt; colspan - 1; ++k) outRow.push(null)</span>
+<span class="line">    }</span>
+<span class="line">    out.push(outRow)</span>
+<span class="line">  }</span>
+<span class="line">  return [out, ranges]</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">function datenum(v: any, date1904 = null) {</span>
+<span class="line">  if (date1904) {</span>
+<span class="line">    v += 1462</span>
+<span class="line">  }</span>
+<span class="line">  const epoch = Date.parse(v)</span>
+<span class="line">  return (</span>
+<span class="line">    (epoch - (new Date(Date.UTC(1899, 11, 30)) as any)) / (24 * 60 * 60 * 1000)</span>
+<span class="line">  )</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">function sheet_from_array_of_arrays(data: any) {</span>
+<span class="line">  const ws: any = {}</span>
+<span class="line">  const range = {</span>
+<span class="line">    s: {</span>
+<span class="line">      c: 10000000,</span>
+<span class="line">      r: 10000000,</span>
+<span class="line">    },</span>
+<span class="line">    e: {</span>
+<span class="line">      c: 0,</span>
+<span class="line">      r: 0,</span>
+<span class="line">    },</span>
+<span class="line">  }</span>
+<span class="line">  for (let R = 0; R !== data.length; ++R) {</span>
+<span class="line">    for (let C = 0; C !== data[R].length; ++C) {</span>
+<span class="line">      if (range.s.r &gt; R) range.s.r = R</span>
+<span class="line">      if (range.s.c &gt; C) range.s.c = C</span>
+<span class="line">      if (range.e.r &lt; R) range.e.r = R</span>
+<span class="line">      if (range.e.c &lt; C) range.e.c = C</span>
+<span class="line">      const cell: any = {</span>
+<span class="line">        v: data[R][C],</span>
+<span class="line">      }</span>
+<span class="line">      if (cell.v === null) continue</span>
+<span class="line">      const cellRef = utils.encode_cell({</span>
+<span class="line">        c: C,</span>
+<span class="line">        r: R,</span>
+<span class="line">      })</span>
+<span class="line"></span>
+<span class="line">      if (typeof cell.v === &#39;number&#39;) cell.t = &#39;n&#39;</span>
+<span class="line">      else if (typeof cell.v === &#39;boolean&#39;) cell.t = &#39;b&#39;</span>
+<span class="line">      else if (cell.v instanceof Date) {</span>
+<span class="line">        cell.t = &#39;n&#39;</span>
+<span class="line">        cell.z = (SSF as any)._table[14]</span>
+<span class="line">        cell.v = datenum(cell.v)</span>
+<span class="line">      } else cell.t = &#39;s&#39;</span>
+<span class="line"></span>
+<span class="line">      ws[cellRef] = cell</span>
+<span class="line">    }</span>
+<span class="line">  }</span>
+<span class="line">  if (range.s.c &lt; 10000000) ws[&#39;!ref&#39;] = utils.encode_range(range)</span>
+<span class="line">  return ws</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">class Workbook {</span>
+<span class="line">  public SheetNames: any[] = []</span>
+<span class="line">  public Sheets: any = {}</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">function s2ab(s: any) {</span>
+<span class="line">  const buf = new ArrayBuffer(s.length)</span>
+<span class="line">  const view = new Uint8Array(buf)</span>
+<span class="line">  for (let i = 0; i !== s.length; ++i) view[i] = s.charCodeAt(i) &amp; 0xff</span>
+<span class="line">  return buf</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">export function export_table_to_excel(id: any) {</span>
+<span class="line">  const theTable = document.getElementById(id)</span>
+<span class="line">  const oo = generateArray(theTable)</span>
+<span class="line">  const ranges = oo[1]</span>
+<span class="line"></span>
+<span class="line">  const data = oo[0]</span>
+<span class="line">  const wsName = &#39;SheetJS&#39;</span>
+<span class="line"></span>
+<span class="line">  const wb = new Workbook()</span>
+<span class="line">  const ws = sheet_from_array_of_arrays(data)</span>
+<span class="line"></span>
+<span class="line">  ws[&#39;!merges&#39;] = ranges</span>
+<span class="line"></span>
+<span class="line">  wb.SheetNames.push(wsName)</span>
+<span class="line">  wb.Sheets[wsName] = ws</span>
+<span class="line"></span>
+<span class="line">  const wbout = write(wb, {</span>
+<span class="line">    bookType: &#39;xlsx&#39;,</span>
+<span class="line">    bookSST: false,</span>
+<span class="line">    type: &#39;binary&#39;,</span>
+<span class="line">  })</span>
+<span class="line"></span>
+<span class="line">  saveAs(</span>
+<span class="line">    new Blob([s2ab(wbout)], {</span>
+<span class="line">      type: &#39;application/octet-stream&#39;,</span>
+<span class="line">    }),</span>
+<span class="line">    &#39;test.xlsx&#39;</span>
+<span class="line">  )</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">export function export_json_to_excel(</span>
+<span class="line">  {</span>
+<span class="line">    multiHeader = [],</span>
+<span class="line">    header,</span>
+<span class="line">    data,</span>
+<span class="line">    filename,</span>
+<span class="line">    merges = [],</span>
+<span class="line">    autoWidth = true,</span>
+<span class="line">    bookType = &#39;xlsx&#39;,</span>
+<span class="line">  } = { header: {}, data: [] as any[], filename: &#39;&#39; }</span>
+<span class="line">) {</span>
+<span class="line">  /* original data */</span>
+<span class="line">  filename = filename || &#39;excel-list&#39;</span>
+<span class="line">  data = [...data]</span>
+<span class="line">  data.unshift(header)</span>
+<span class="line"></span>
+<span class="line">  for (let i = multiHeader.length - 1; i &gt; -1; i--) {</span>
+<span class="line">    data.unshift(multiHeader[i])</span>
+<span class="line">  }</span>
+<span class="line"></span>
+<span class="line">  const wsName = &#39;SheetJS&#39;</span>
+<span class="line">  const wb = new Workbook()</span>
+<span class="line">  const ws = sheet_from_array_of_arrays(data)</span>
+<span class="line"></span>
+<span class="line">  if (merges.length &gt; 0) {</span>
+<span class="line">    if (!ws[&#39;!merges&#39;]) {</span>
+<span class="line">      ws[&#39;!merges&#39;] = []</span>
+<span class="line">    }</span>
+<span class="line">    merges.forEach((item) =&gt; {</span>
+<span class="line">      ws[&#39;!merges&#39;].push(utils.decode_range(item))</span>
+<span class="line">    })</span>
+<span class="line">  }</span>
+<span class="line"></span>
+<span class="line">  if (autoWidth) {</span>
+<span class="line">    const colWidth = data.map((row) =&gt;</span>
+<span class="line">      row.map((val: any) =&gt; {</span>
+<span class="line">        if (val === null) {</span>
+<span class="line">          return {</span>
+<span class="line">            wch: 10,</span>
+<span class="line">          }</span>
+<span class="line">        } else if (val.toString().charCodeAt(0) &gt; 255) {</span>
+<span class="line">          return {</span>
+<span class="line">            wch: val.toString().length * 2,</span>
+<span class="line">          }</span>
+<span class="line">        } else {</span>
+<span class="line">          return {</span>
+<span class="line">            wch: val.toString().length,</span>
+<span class="line">          }</span>
+<span class="line">        }</span>
+<span class="line">      })</span>
+<span class="line">    )</span>
+<span class="line">    const result = colWidth[0]</span>
+<span class="line">    for (let i = 1; i &lt; colWidth.length; i++) {</span>
+<span class="line">      for (let j = 0; j &lt; colWidth[i].length; j++) {</span>
+<span class="line">        if (result[j][&#39;wch&#39;] &lt; colWidth[i][j][&#39;wch&#39;]) {</span>
+<span class="line">          result[j][&#39;wch&#39;] = colWidth[i][j][&#39;wch&#39;]</span>
+<span class="line">        }</span>
+<span class="line">      }</span>
+<span class="line">    }</span>
+<span class="line">    ws[&#39;!cols&#39;] = result</span>
+<span class="line">  }</span>
+<span class="line"></span>
+<span class="line">  wb.SheetNames.push(wsName)</span>
+<span class="line">  wb.Sheets[wsName] = ws</span>
+<span class="line"></span>
+<span class="line">  const wbout = write(wb, {</span>
+<span class="line">    bookType: bookType as BookType,</span>
+<span class="line">    bookSST: false,</span>
+<span class="line">    type: &#39;binary&#39;,</span>
+<span class="line">  })</span>
+<span class="line">  saveAs(</span>
+<span class="line">    new Blob([s2ab(wbout)], {</span>
+<span class="line">      type: &#39;application/octet-stream&#39;,</span>
+<span class="line">    }),</span>
+<span class="line">    `${filename}.${bookType}`</span>
+<span class="line">  )</span>
+<span class="line">}</span>
+<span class="line"></span></code></pre><div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0;"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h2 id="后续要补充的讲解" tabindex="-1"><a class="header-anchor" href="#后续要补充的讲解"><span>后续要补充的讲解：</span></a></h2><p>sheet_from_array_of_arrays函数实现、s2ab实现、<code>Blob</code>对象是什么、saveAs如何触发浏览器下载，其他各部分其他函数；</p></div><!--[--><!--]--></div><footer class="vp-page-meta"><!----><div class="vp-meta-item git-info"><div class="vp-meta-item last-updated"><span class="meta-item-label">最近更新：: </span><time class="meta-item-info" datetime="2025-05-28T16:22:01.000Z" data-allow-mismatch>2025/5/28 16:22</time></div><!----></div></footer><nav class="vp-page-nav" aria-label="page navigation"><a class="route-link auto-link prev" href="/InternshipGain/guide/theFirstInternship/gain5.html" aria-label="项目一——导出商品列表"><!--[--><div class="hint"><span class="arrow left"></span> Prev</div><div class="link"><span class="external-link">项目一——导出商品列表</span></div><!--]--></a><!----></nav><!--[--><!--]--></main><!--]--></div><!--[--><!----><!--]--><!--]--></div>
+    <script type="module" src="/InternshipGain/assets/app-B05S7fmk.js" defer></script>
+  </body>
+</html>
