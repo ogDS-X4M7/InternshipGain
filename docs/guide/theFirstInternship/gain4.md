@@ -60,7 +60,7 @@ export default {
     Menu,
   },
   setup(){
-    const loginflag=ref(localStorage.getItem('token'))
+    let loginflag=ref(false)
     onMounted(()=>{
       loginflag.value = localStorage.getItem('token')!==null;
     })

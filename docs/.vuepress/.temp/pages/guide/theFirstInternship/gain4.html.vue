@@ -53,7 +53,7 @@
 <span class="line">    Menu,</span>
 <span class="line">  },</span>
 <span class="line">  setup(){</span>
-<span class="line">    const loginflag=ref(localStorage.getItem('token'))</span>
+<span class="line">    let loginflag=ref(false)</span>
 <span class="line">    onMounted(()=>{</span>
 <span class="line">      loginflag.value = localStorage.getItem('token')!==null;</span>
 <span class="line">    })</span>
