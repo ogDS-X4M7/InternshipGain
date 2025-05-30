@@ -18,7 +18,7 @@
 
 ## 各部分函数解析
 ### 基本信息
-供外部使用导出`Excel`文件的方法只有[export_table_to_excel](#export_table_to_excel)和[export_json_to_excel](#export_json_to_excel)，其他的方法和结构都是为这两个导出方法服务的。
+供外部使用导出`Excel`文件的方法只有[export_table_to_excel](#关于export-table-to-excel)和[export_json_to_excel](#关于export-json-to-excel)，其他的方法和结构都是为这两个导出方法服务的。
 
 ### 关于generateArray
 这个方法的作用是将`HTML`表格（`<table>` 元素）转换为二维数组，并处理表格中的合并单元格（`colspan`和`rowspan`）
@@ -48,7 +48,7 @@ const ranges: any[] = []; // 存储合并单元格的范围
 
 
 #### 遍历每一行
-正如上面所说，以行为大单位遍历，后面再细分列，也就是到每个单元格了，这里的outRow用于存储处理完毕后的行内容，也就是后续会对它输入单元格内容并补充该行所需的`null`：
+正如上面所说，以行为大单位遍历，后面再细分列，也就是到每个单元格了，这里的`outRow`用于存储处理完毕后的行内容，也就是后续会对它输入单元格内容并补充该行所需的`null`：
 ```
 for (let R = 0; R < rows.length; ++R) {
   const outRow: any[] = []; // 当前行的数据
@@ -75,8 +75,8 @@ for (const cell of columns) {
 
 
 #### 处理记录的合并单元格——行合并
-因为是行遍历，对行处理，所以如果出现行合并，就需要ranges记录信息，才能在进入需要被上一行合并的第二行时准确判断出需要合并，这部分代码主要用于处理跨行合并，之前已经读取过合并信息([下面](#处理当前单元格的合并属性)马上讲到)，后续遍历读取合并区域信息来判断是否需要合并，需要时填充`null`进入该行结果。
-之所以说这里主要处理行合并，是因为列合并是在[下面](#添加单元格值并处理colspan)读取到单元格列合并信息就立刻处理掉的，只有跨行合并这种在行遍历情况下需要后续才处理的、处理比较迟钝的情况才会需要通过ranges合并信息来判断并处理。
+因为是行遍历，对行处理，所以如果出现行合并，就需要`ranges`记录信息，才能在进入需要被上一行合并的第二行时准确判断出需要合并，这部分代码主要用于处理跨行合并，之前已经读取过合并信息([下面](#记录当前单元格的合并属性)马上讲到)，后续遍历读取合并区域信息来判断是否需要合并，需要时填充`null`进入该行结果。
+之所以说这里主要处理行合并，是因为列合并是在[下面](#添加当前单元格值并进行列合并)读取到单元格列合并信息就立刻处理掉的，只有跨行合并这种在行遍历情况下需要后续才处理的、处理比较迟钝的情况才会需要通过`ranges`合并信息来判断并处理。
 ```
 ranges.forEach((range) => {
   if (
@@ -310,11 +310,32 @@ for (let R = 0; R !== data.length; ++R) {
 ```
 
 
-### 关于export_table_to_excel
 
+
+
+
+
+
+
+### 关于Workbook
+`Workbook`类是`SheetJS`中组织`Excel`文件内容的核心容器，通过：
+
+`SheetNames`数组：管理工作表的显示顺序
+
+`Sheets`对象：存储每个工作表的单元格数据和元信息（虽然我使用时只用来生成一张工作表，但其实一个工作簿可以有多张工作表的）
+```
+class Workbook {
+  public SheetNames: any[] = []
+  public Sheets: any = {}
+}
+```
 
 ### 关于s2ab
-这个方法的作用就是将二进制字符串转为`ArrayBuffer`，因为当使用`FileSaver.js`等库保存文件时，需要传入`Blob`对象（基于二进制数据），而非字符串
+这个方法的作用就是将二进制字符串转为`ArrayBuffer`，因为当使用`FileSaver.js`等库保存文件时，需要传入`Blob`对象（基于二进制数据），而非字符串。
+
+另外，`ArrayBuffer`是`JavaScript`中用于表示固定长度的二进制数据缓冲区的核心数据结构，它是处理二进制文件（如图片、音频、`Excel`）、网络请求（如`fetch`的二进制响应）等底层操作的基础。
+
+`ArrayBuffer`创建时需指定大小（字节数），后续无法更改；存储的是纯二进制数据，不关联任何特定格式（如文本、图片）；不可直接操作，需通过*视图对象*（如`Uint8Array`、`DataView`）读写其内容。
 ```
 function s2ab(s: any) {
   const buf = new ArrayBuffer(s.length) // 创建 ArrayBuffer
@@ -328,6 +349,63 @@ function s2ab(s: any) {
 `s.charCodeAt(i)`是获取第`i`个字符的`Unicode`码点（如`A`的码点是`65`）；
 
 `& 0xff`：取低`8`位（相当于`% 256`），用于处理超出`8`位的字符，因为导入的参数`s`是*二进制字符串*，对于*二进制字符串*，码点范围应为 `0-255`，即低八位表示，每个字符直接映射一个字节(`8`位)，无需编码转换。`& 0xff`确保了数据安全，即使字符串包含超出`0-255`范围的字符，`& 0xff`也会将其截断为低`8`位，防止意外混入*非二进制字符串*的字符（如中文），导致数据错误。
+
+
+### 关于export_table_to_excel
+这个方法是通过`HTML`元素`ID`获取表格，导出为`Excel`文件。它的流程总结倒推起来和`export_json_to_excel`有很多类似的地方（虽然文章从上往下看先看到这个方法，但实际上我先写了项目中使用到了的`export_json_to_excel`，因此这里说和`export_json_to_excel`类似，所以其实建议[先看](#关于export-json-to-excel)之后`export_json_to_excel`再过来看这部分内容）：
+
+`saveAs`保存文件->需要`Blob`对象生成->需要`ArrayBuffer`生成->需要`wbout`（二进制字符串）生成->需要`write`方法生成->需要参数`wb`->需要工作表`ws`组成->需要`sheet_from_array_of_arrays`生成并提供合并信息->需要参数二维数组和合并信息->需要`generateArray`生成->需要`table`的`HTML`元素实例->需要`id`来获取->用户传入
+
+
+#### 获取表格并转换为数组
+因为参数其实只需要传入`table`的`id`，非常简单，所以我直接开始讲代码的逻辑实现。
+```
+const theTable = document.getElementById(id);
+const oo = generateArray(theTable);
+const ranges = oo[1];
+const data = oo[0];
+```
+`generateArray`在[上面](#关于generatearray)已经讲解过，这里就是通过`id`获取实例`table`，交给`generateArray`将`HTML`表格转换为二维数组，保存返回的二维数组和合并信息。
+
+#### 创建工作簿和工作表，配置合并单元格
+`Workbook`是`SheetJS`的工作簿对象，具体看[上面的讲解](#关于workbook)；`sheet_from_array_of_arrays`将二维数组`data`转换为`xlsx`所需的`Worksheet`对象，具体实现看关于`sheet_from_array_of_arrays`函数的[讲解部分](#关于sheet_from_array_of_arrays)
+```
+const wb = new Workbook();
+const ws = sheet_from_array_of_arrays(data);
+ws['!merges'] = ranges;
+```
+`!merges`是`SheetJS`中表示合并单元格的特殊属性，类似这部分解释其实已经写了很多，我不知道会不会都写重复了，还是比较简单的。这里把`generateArray`处理后返回的合并信息直接交给`ws['!merges']`即可
+
+#### 生成文件并下载
+```
+wb.SheetNames.push(wsName) // 添加工作表名称
+wb.Sheets[wsName] = ws // 将工作表添加到工作簿
+const wbout = write(wb, {
+  bookType: 'xlsx',
+  bookSST: false,
+  type: 'binary',
+});
+saveAs(
+  new Blob([s2ab(wbout)], {
+    type: 'application/octet-stream',
+  }),
+  'test.xlsx'
+);
+```
+`SheetNames`是工作表名称数组（控制显示顺序），`Sheets`是工作表对象映射（键为表名，值为表数据）
+
+`write`方法是`SheetJS`的核心导出函数，这里使用工作表生成二进制字符串，其中：`bookType`是输出格式（xlsx、csv、xls 等）；`bookSST`是否生成共享字符串表（优化大型文件）；`type`是输出类型（binary 表示二进制字符串）
+
+最后是`saveAs`方法，即`FileSaver.js`提供的下载函数，操作对象是`Blob`；
+
+`Blob`是二进制大对象，封装文件内容，通过`ArrayBuffer`生成；
+
+`s2ab`函数的作用就是将二进制字符串，也就是我们刚刚通过`write`方法生成的`wbout`转换为`ArrayBuffer`，通过`Uint8Array`逐字节处理。具体可以看[关于s2ab](#关于s2ab)；
+
+这部分内容主要跟下面的`export_json_to_excel`的[讲解部分](#生成文件并下载-1)是一样的，所以这里就只是简单写一下。
+
+
+
 
 ### 关于export_json_to_excel
 这个方法的作用是将结构化`JSON`数据导出为`Excel`，是供外部使用导出`Excel`文件的方法：总结起来就是：为了使用`saveAs`自动处理文件流的写入来导出文件，需要`Blob`对象，Blob对象需要`ArrayBuffer`来生成，而`ArrayBuffer`由二进制字符串生成，于是使用`xlsx`库的`write`方法生成对应的二进制字符串，`write`方法需要参数`wb`也就是工作簿，而工作簿最主要的内容就是工作表`ws`，而工作表就是通过`sheet_from_array_of_arrays`对传入的二维数组进行处理得到的，当然还需要对合并单元格做标记处理、对列宽进行计算保存，这就是这一整套流程的逆推，也是要有这套流程的原因：
@@ -370,7 +448,7 @@ for (let i = multiHeader.length - 1; i > -1; i--) {
 
 
 #### 生成工作表（Worksheet）
-这部分主要是调用`sheet_from_array_of_arrays`函数，将`data`转换为`xlsx`所需的`Worksheet`对象，具体实现看关于`sheet_from_array_of_arrays`函数的[讲解部分](#关于sheet_from_array_of_arrays)
+这部分主要是调用`sheet_from_array_of_arrays`函数，将`data`转换为`xlsx`所需的`Worksheet`对象，具体实现看关于`sheet_from_array_of_arrays`函数的[讲解部分](#关于sheet_from_array_of_arrays)；而`Workbook`是`SheetJS`的工作簿对象，具体看[上面的讲解](#关于workbook)；
 ```
 const wsName = 'SheetJS'
 const wb = new Workbook()
@@ -478,9 +556,11 @@ saveAs(
 ```
 可以看到是通过*浏览器的文件操作接口*和`Blob`对象实现文件保存功能：
 
+`SheetNames`是工作表名称数组（控制显示顺序），`Sheets`是工作表对象映射（键为表名，值为表数据）
+
 `Blob`是`Binary Large Object`（二进制大对象），用于存储二进制数据（如文本、图片、二进制文件等）。可以看作是一个不可变的原始数据缓冲区，常见于文件操作、网络请求（如`fetch`的响应体）等场景。这里的`Blob([s2ab(),{type}])`，关于`s2ab`方法和`ArrayBuffer`见[关于s2ab](#关于s2ab)；`type`参数：`application/octet-stream`是通用二进制流类型，适用于未知文件类型。
 
-`saveAs`函数是`FileSaver.js`库提供的核心方法，用于在浏览器中触发文件保存对话框。`saveAs(blob, filename)`执行时，浏览器生成一个临时的`URL`指向`Blob`对象；触发文件保存对话框，用户可选择保存路径；自动处理文件流的写入，无需前端代码干预。
+`saveAs`函数是`FileSaver.js`库提供的核心方法，用于在浏览器中触发文件保存对话框。`saveAs(Blob, filename)`执行时，浏览器生成一个临时的`URL`指向`Blob`对象；触发文件保存对话框，用户可选择保存路径；自动处理文件流的写入，无需前端代码干预。
 
 
 ## 工具的总体实现
@@ -725,5 +805,3 @@ export function export_json_to_excel(
 }
 ```
 
-## 后续要补充的讲解：
-export_table_to_excel函数；
