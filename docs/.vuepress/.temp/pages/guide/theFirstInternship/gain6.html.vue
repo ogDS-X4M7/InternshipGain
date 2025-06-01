@@ -10,7 +10,7 @@
 <p><code v-pre>BookType</code>：定义<code v-pre>Excel</code>文件类型（如<code v-pre>xlsx</code>、<code v-pre>xls</code>）</p>
 <h2 id="各部分函数解析" tabindex="-1"><a class="header-anchor" href="#各部分函数解析"><span>各部分函数解析</span></a></h2>
 <h3 id="基本信息" tabindex="-1"><a class="header-anchor" href="#基本信息"><span>基本信息</span></a></h3>
-<p>供外部使用导出<code v-pre>Excel</code>文件的方法只有<a href="#export_table_to_excel">export_table_to_excel</a>和<a href="#export_json_to_excel">export_json_to_excel</a>，其他的方法和结构都是为这两个导出方法服务的。</p>
+<p>供外部使用导出<code v-pre>Excel</code>文件的方法只有<a href="#%E5%85%B3%E4%BA%8Eexport-table-to-excel">export_table_to_excel</a>和<a href="#%E5%85%B3%E4%BA%8Eexport-json-to-excel">export_json_to_excel</a>，其他的方法和结构都是为这两个导出方法服务的。</p>
 <h3 id="关于generatearray" tabindex="-1"><a class="header-anchor" href="#关于generatearray"><span>关于generateArray</span></a></h3>
 <p>这个方法的作用是将<code v-pre>HTML</code>表格（<code v-pre>&lt;table&gt;</code> 元素）转换为二维数组，并处理表格中的合并单元格（<code v-pre>colspan</code>和<code v-pre>rowspan</code>）</p>
 <p>总体来说，它的处理就是把需要合并的单元格全都补充上<code v-pre>null</code>，并且将表格中的<code v-pre>colspan</code>和<code v-pre>rowspan</code>获取保存下来作为合并信息。</p>
@@ -27,7 +27,7 @@
 <span class="line">const ranges: any[] = []; // 存储合并单元格的范围</span>
 <span class="line"></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="遍历每一行" tabindex="-1"><a class="header-anchor" href="#遍历每一行"><span>遍历每一行</span></a></h4>
-<p>正如上面所说，以行为大单位遍历，后面再细分列，也就是到每个单元格了，这里的outRow用于存储处理完毕后的行内容，也就是后续会对它输入单元格内容并补充该行所需的<code v-pre>null</code>：</p>
+<p>正如上面所说，以行为大单位遍历，后面再细分列，也就是到每个单元格了，这里的<code v-pre>outRow</code>用于存储处理完毕后的行内容，也就是后续会对它输入单元格内容并补充该行所需的<code v-pre>null</code>：</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">for (let R = 0; R &lt; rows.length; ++R) {</span>
 <span class="line">  const outRow: any[] = []; // 当前行的数据</span>
 <span class="line">  const row = rows[R];</span>
@@ -48,8 +48,8 @@
 <span class="line">}</span>
 <span class="line"></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="处理记录的合并单元格——行合并" tabindex="-1"><a class="header-anchor" href="#处理记录的合并单元格——行合并"><span>处理记录的合并单元格——行合并</span></a></h4>
-<p>因为是行遍历，对行处理，所以如果出现行合并，就需要ranges记录信息，才能在进入需要被上一行合并的第二行时准确判断出需要合并，这部分代码主要用于处理跨行合并，之前已经读取过合并信息(<a href="#%E5%A4%84%E7%90%86%E5%BD%93%E5%89%8D%E5%8D%95%E5%85%83%E6%A0%BC%E7%9A%84%E5%90%88%E5%B9%B6%E5%B1%9E%E6%80%A7">下面</a>马上讲到)，后续遍历读取合并区域信息来判断是否需要合并，需要时填充<code v-pre>null</code>进入该行结果。
-之所以说这里主要处理行合并，是因为列合并是在<a href="#%E6%B7%BB%E5%8A%A0%E5%8D%95%E5%85%83%E6%A0%BC%E5%80%BC%E5%B9%B6%E5%A4%84%E7%90%86colspan">下面</a>读取到单元格列合并信息就立刻处理掉的，只有跨行合并这种在行遍历情况下需要后续才处理的、处理比较迟钝的情况才会需要通过ranges合并信息来判断并处理。</p>
+<p>因为是行遍历，对行处理，所以如果出现行合并，就需要<code v-pre>ranges</code>记录信息，才能在进入需要被上一行合并的第二行时准确判断出需要合并，这部分代码主要用于处理跨行合并，之前已经读取过合并信息(<a href="#%E8%AE%B0%E5%BD%95%E5%BD%93%E5%89%8D%E5%8D%95%E5%85%83%E6%A0%BC%E7%9A%84%E5%90%88%E5%B9%B6%E5%B1%9E%E6%80%A7">下面</a>马上讲到)，后续遍历读取合并区域信息来判断是否需要合并，需要时填充<code v-pre>null</code>进入该行结果。
+之所以说这里主要处理行合并，是因为列合并是在<a href="#%E6%B7%BB%E5%8A%A0%E5%BD%93%E5%89%8D%E5%8D%95%E5%85%83%E6%A0%BC%E5%80%BC%E5%B9%B6%E8%BF%9B%E8%A1%8C%E5%88%97%E5%90%88%E5%B9%B6">下面</a>读取到单元格列合并信息就立刻处理掉的，只有跨行合并这种在行遍历情况下需要后续才处理的、处理比较迟钝的情况才会需要通过<code v-pre>ranges</code>合并信息来判断并处理。</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">ranges.forEach((range) => {</span>
 <span class="line">  if (</span>
 <span class="line">    R >= range.s.r &amp;&amp; // 当前行是否在合并范围内</span>
@@ -163,6 +163,11 @@
 <span class="line"></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="遍历二维数组-处理每个单元格" tabindex="-1"><a class="header-anchor" href="#遍历二维数组-处理每个单元格"><span>遍历二维数组，处理每个单元格</span></a></h4>
 <h5 id="范围更新-确定工作表的实际范围" tabindex="-1"><a class="header-anchor" href="#范围更新-确定工作表的实际范围"><span>范围更新：确定工作表的实际范围</span></a></h5>
+<p>定义工作表的边界（从左上角到右下角的单元格区域）、确定这个范围的主要目的是：</p>
+<p>优化文件大小：只保存实际有数据的区域，避免包含大量空单元格</p>
+<p>确保软件兼容性：让<code v-pre>Excel</code>等工具正确识别数据边界</p>
+<p>提升渲染性能：减少不必要的单元格计算和显示</p>
+<p>这部分代码，保证起始位置的行和列，等于工作表左上角单元格的行和列；保证结束位置的行和列，等于右下角单元格的行和列</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">for (let R = 0; R !== data.length; ++R) {</span>
 <span class="line">  for (let C = 0; C !== data[R].length; ++C) {</span>
 <span class="line">    // 更新范围</span>
@@ -183,7 +188,8 @@
 <span class="line">}</span>
 <span class="line"></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h5 id="创建单元格对象-生成单元格引用" tabindex="-1"><a class="header-anchor" href="#创建单元格对象-生成单元格引用"><span>创建单元格对象，生成单元格引用</span></a></h5>
-<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">// 处理单元格</span>
+<p>从二维数组中获取值，并准备创建符合<code v-pre>SheetJS</code>格式的单元格对象。将数字索引转换为<code v-pre>Excel</code>的<em>字母 - 数字</em>引用，确保数据能正确映射到工作表的对应位置：<code v-pre>utils.encode_cell</code>与下面的<code v-pre>utils.decode_range</code>正好相反，不过都是为了<code v-pre>SheetJS</code>格式的需要。</p>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">    // 处理单元格</span>
 <span class="line">    const cell: any = { v: data[R][C] };</span>
 <span class="line">    if (cell.v === null) continue;</span>
 <span class="line">    </span>
@@ -191,6 +197,12 @@
 <span class="line">    const cellRef = utils.encode_cell({ c: C, r: R });</span>
 <span class="line"></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h5 id="根据单元格值类型设置格式-date对象转日期序列值-单元格添加到工作表" tabindex="-1"><a class="header-anchor" href="#根据单元格值类型设置格式-date对象转日期序列值-单元格添加到工作表"><span>根据单元格值类型设置格式，Date对象转日期序列值，单元格添加到工作表</span></a></h5>
+<p>具体讲解一下各个类型与属性：</p>
+<p><code v-pre>cell.v</code>：存储单元格的原始值</p>
+<p><code v-pre>cell.t</code>表示单元格类型</p>
+<p><code v-pre>'n'</code>表示数值</p>
+<p><code v-pre>'b'</code>表示布尔值</p>
+<p><code v-pre>'s'</code>表示字符串</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">    // 根据单元格值类型设置格式</span>
 <span class="line">    if (typeof cell.v === 'number') cell.t = 'n';</span>
 <span class="line">    else if (typeof cell.v === 'boolean') cell.t = 'b';</span>
@@ -202,13 +214,82 @@
 <span class="line">    </span>
 <span class="line">    ws[cellRef] = cell; // 将单元格添加到工作表</span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="设置工作表范围并返回" tabindex="-1"><a class="header-anchor" href="#设置工作表范围并返回"><span>设置工作表范围并返回</span></a></h4>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>日期处理的特殊逻辑是这部分代码中最关键的部分：</p>
+<p>将类型设为<code v-pre>'n'</code>（数值），因为<code v-pre>Excel</code>中日期本质上是数值</p>
+<p><code v-pre>cell.z</code>设置日期格式（<code v-pre>SSF._table[14]</code>是预定义的日期格式）</p>
+<p><code v-pre>datenum()</code>函数将<code v-pre>JavaScript</code>日期对象转换为<code v-pre>Excel</code>的日期数值，具体的原因和实现已经<a href="#%E5%85%B3%E4%BA%8Edatenum">写过</a></p>
+<h4 id="设置工作表范围并返回" tabindex="-1"><a class="header-anchor" href="#设置工作表范围并返回"><span>设置工作表范围并返回</span></a></h4>
+<p><code v-pre>!ref</code>是<code v-pre>SheetJS</code>的特殊属性，表示工作表的范围</p>
+<p><code v-pre>utils.encode_range</code>将范围对象<code v-pre>range</code>转换为字符串（如 &quot;A1:C3&quot;）</p>
+<p>最后将工作表返回</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">  if (range.s.c &lt; 10000000) ws['!ref'] = utils.encode_range(range)</span>
 <span class="line">  return ws</span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div></div></div><h3 id="关于export-table-to-excel" tabindex="-1"><a class="header-anchor" href="#关于export-table-to-excel"><span>关于export_table_to_excel</span></a></h3>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div></div></div><h3 id="关于workbook" tabindex="-1"><a class="header-anchor" href="#关于workbook"><span>关于Workbook</span></a></h3>
+<p><code v-pre>Workbook</code>类是<code v-pre>SheetJS</code>中组织<code v-pre>Excel</code>文件内容的核心容器，通过：</p>
+<p><code v-pre>SheetNames</code>数组：管理工作表的显示顺序</p>
+<p><code v-pre>Sheets</code>对象：存储每个工作表的单元格数据和元信息（虽然我使用时只用来生成一张工作表，但其实一个工作簿可以有多张工作表的）</p>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">class Workbook {</span>
+<span class="line">  public SheetNames: any[] = []</span>
+<span class="line">  public Sheets: any = {}</span>
+<span class="line">}</span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h3 id="关于s2ab" tabindex="-1"><a class="header-anchor" href="#关于s2ab"><span>关于s2ab</span></a></h3>
+<p>这个方法的作用就是将二进制字符串转为<code v-pre>ArrayBuffer</code>，因为当使用<code v-pre>FileSaver.js</code>等库保存文件时，需要传入<code v-pre>Blob</code>对象（基于二进制数据），而非字符串。</p>
+<p>另外，<code v-pre>ArrayBuffer</code>是<code v-pre>JavaScript</code>中用于表示固定长度的二进制数据缓冲区的核心数据结构，它是处理二进制文件（如图片、音频、<code v-pre>Excel</code>）、网络请求（如<code v-pre>fetch</code>的二进制响应）等底层操作的基础。</p>
+<p><code v-pre>ArrayBuffer</code>创建时需指定大小（字节数），后续无法更改；存储的是纯二进制数据，不关联任何特定格式（如文本、图片）；不可直接操作，需通过<em>视图对象</em>（如<code v-pre>Uint8Array</code>、<code v-pre>DataView</code>）读写其内容。</p>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">function s2ab(s: any) {</span>
+<span class="line">  const buf = new ArrayBuffer(s.length) // 创建 ArrayBuffer</span>
+<span class="line">  const view = new Uint8Array(buf) // 创建 Uint8Array 视图</span>
+<span class="line">  for (let i = 0; i !== s.length; ++i) view[i] = s.charCodeAt(i) &amp; 0xff // 遍历字符串并转换</span>
+<span class="line">  return buf</span>
+<span class="line">}</span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>其中创建<code v-pre>Uint8Array</code>视图是要通过数组语法操作<code v-pre>ArrayBuffer</code>的字节（如<code v-pre>view[0] = 65</code>表示第一个字节为<code v-pre>65</code>，对应<code v-pre>ASCII</code>字符<code v-pre>A</code>）。正如下面的遍历字符串并转换所进行的操作，就是对<code v-pre>view[i]</code>的数组语法操作，其中：</p>
+<p><code v-pre>s.charCodeAt(i)</code>是获取第<code v-pre>i</code>个字符的<code v-pre>Unicode</code>码点（如<code v-pre>A</code>的码点是<code v-pre>65</code>）；</p>
+<p><code v-pre>&amp; 0xff</code>：取低<code v-pre>8</code>位（相当于<code v-pre>% 256</code>），用于处理超出<code v-pre>8</code>位的字符，因为导入的参数<code v-pre>s</code>是<em>二进制字符串</em>，对于<em>二进制字符串</em>，码点范围应为 <code v-pre>0-255</code>，即低八位表示，每个字符直接映射一个字节(<code v-pre>8</code>位)，无需编码转换。<code v-pre>&amp; 0xff</code>确保了数据安全，即使字符串包含超出<code v-pre>0-255</code>范围的字符，<code v-pre>&amp; 0xff</code>也会将其截断为低<code v-pre>8</code>位，防止意外混入<em>非二进制字符串</em>的字符（如中文），导致数据错误。</p>
+<h3 id="关于export-table-to-excel" tabindex="-1"><a class="header-anchor" href="#关于export-table-to-excel"><span>关于export_table_to_excel</span></a></h3>
+<p>这个方法是通过<code v-pre>HTML</code>元素<code v-pre>ID</code>获取表格，导出为<code v-pre>Excel</code>文件。它的流程总结倒推起来和<code v-pre>export_json_to_excel</code>有很多类似的地方（虽然文章从上往下看先看到这个方法，但实际上我先写了项目中使用到了的<code v-pre>export_json_to_excel</code>，因此这里说和<code v-pre>export_json_to_excel</code>类似，所以其实建议<a href="#%E5%85%B3%E4%BA%8Eexport-json-to-excel">先看</a>之后<code v-pre>export_json_to_excel</code>再过来看这部分内容）：</p>
+<p><code v-pre>saveAs</code>保存文件-&gt;需要<code v-pre>Blob</code>对象生成-&gt;需要<code v-pre>ArrayBuffer</code>生成-&gt;需要<code v-pre>wbout</code>（二进制字符串）生成-&gt;需要<code v-pre>write</code>方法生成-&gt;需要参数<code v-pre>wb</code>-&gt;需要工作表<code v-pre>ws</code>组成-&gt;需要<code v-pre>sheet_from_array_of_arrays</code>生成并提供合并信息-&gt;需要参数二维数组和合并信息-&gt;需要<code v-pre>generateArray</code>生成-&gt;需要<code v-pre>table</code>的<code v-pre>HTML</code>元素实例-&gt;需要<code v-pre>id</code>来获取-&gt;用户传入</p>
+<h4 id="获取表格并转换为数组" tabindex="-1"><a class="header-anchor" href="#获取表格并转换为数组"><span>获取表格并转换为数组</span></a></h4>
+<p>因为参数其实只需要传入<code v-pre>table</code>的<code v-pre>id</code>，非常简单，所以我直接开始讲代码的逻辑实现。</p>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">const theTable = document.getElementById(id);</span>
+<span class="line">const oo = generateArray(theTable);</span>
+<span class="line">const ranges = oo[1];</span>
+<span class="line">const data = oo[0];</span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p><code v-pre>generateArray</code>在<a href="#%E5%85%B3%E4%BA%8Egeneratearray">上面</a>已经讲解过，这里就是通过<code v-pre>id</code>获取实例<code v-pre>table</code>，交给<code v-pre>generateArray</code>将<code v-pre>HTML</code>表格转换为二维数组，保存返回的二维数组和合并信息。</p>
+<h4 id="创建工作簿和工作表-配置合并单元格" tabindex="-1"><a class="header-anchor" href="#创建工作簿和工作表-配置合并单元格"><span>创建工作簿和工作表，配置合并单元格</span></a></h4>
+<p><code v-pre>Workbook</code>是<code v-pre>SheetJS</code>的工作簿对象，具体看<a href="#%E5%85%B3%E4%BA%8Eworkbook">上面的讲解</a>；<code v-pre>sheet_from_array_of_arrays</code>将二维数组<code v-pre>data</code>转换为<code v-pre>xlsx</code>所需的<code v-pre>Worksheet</code>对象，具体实现看关于<code v-pre>sheet_from_array_of_arrays</code>函数的<a href="#%E5%85%B3%E4%BA%8Esheet_from_array_of_arrays">讲解部分</a></p>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">const wb = new Workbook();</span>
+<span class="line">const ws = sheet_from_array_of_arrays(data);</span>
+<span class="line">ws['!merges'] = ranges;</span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p><code v-pre>!merges</code>是<code v-pre>SheetJS</code>中表示合并单元格的特殊属性，类似这部分解释其实已经写了很多，我不知道会不会都写重复了，还是比较简单的。这里把<code v-pre>generateArray</code>处理后返回的合并信息直接交给<code v-pre>ws['!merges']</code>即可</p>
+<h4 id="生成文件并下载" tabindex="-1"><a class="header-anchor" href="#生成文件并下载"><span>生成文件并下载</span></a></h4>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">wb.SheetNames.push(wsName) // 添加工作表名称</span>
+<span class="line">wb.Sheets[wsName] = ws // 将工作表添加到工作簿</span>
+<span class="line">const wbout = write(wb, {</span>
+<span class="line">  bookType: 'xlsx',</span>
+<span class="line">  bookSST: false,</span>
+<span class="line">  type: 'binary',</span>
+<span class="line">});</span>
+<span class="line">saveAs(</span>
+<span class="line">  new Blob([s2ab(wbout)], {</span>
+<span class="line">    type: 'application/octet-stream',</span>
+<span class="line">  }),</span>
+<span class="line">  'test.xlsx'</span>
+<span class="line">);</span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p><code v-pre>SheetNames</code>是工作表名称数组（控制显示顺序），<code v-pre>Sheets</code>是工作表对象映射（键为表名，值为表数据）</p>
+<p><code v-pre>write</code>方法是<code v-pre>SheetJS</code>的核心导出函数，这里使用工作表生成二进制字符串，其中：<code v-pre>bookType</code>是输出格式（xlsx、csv、xls 等）；<code v-pre>bookSST</code>是否生成共享字符串表（优化大型文件）；<code v-pre>type</code>是输出类型（binary 表示二进制字符串）</p>
+<p>最后是<code v-pre>saveAs</code>方法，即<code v-pre>FileSaver.js</code>提供的下载函数，操作对象是<code v-pre>Blob</code>；</p>
+<p><code v-pre>Blob</code>是二进制大对象，封装文件内容，通过<code v-pre>ArrayBuffer</code>生成；</p>
+<p><code v-pre>s2ab</code>函数的作用就是将二进制字符串，也就是我们刚刚通过<code v-pre>write</code>方法生成的<code v-pre>wbout</code>转换为<code v-pre>ArrayBuffer</code>，通过<code v-pre>Uint8Array</code>逐字节处理。具体可以看<a href="#%E5%85%B3%E4%BA%8Es2ab">关于s2ab</a>；</p>
+<p>这部分内容主要跟下面的<code v-pre>export_json_to_excel</code>的<a href="#%E7%94%9F%E6%88%90%E6%96%87%E4%BB%B6%E5%B9%B6%E4%B8%8B%E8%BD%BD-1">讲解部分</a>是一样的，所以这里就只是简单写一下。</p>
 <h3 id="关于export-json-to-excel" tabindex="-1"><a class="header-anchor" href="#关于export-json-to-excel"><span>关于export_json_to_excel</span></a></h3>
-<p>这个方法的作用是将结构化<code v-pre>JSON</code>数据导出为<code v-pre>Excel</code>，是供外部使用导出<code v-pre>Excel</code>文件的方法</p>
+<p>这个方法的作用是将结构化<code v-pre>JSON</code>数据导出为<code v-pre>Excel</code>，是供外部使用导出<code v-pre>Excel</code>文件的方法：总结起来就是：为了使用<code v-pre>saveAs</code>自动处理文件流的写入来导出文件，需要<code v-pre>Blob</code>对象，Blob对象需要<code v-pre>ArrayBuffer</code>来生成，而<code v-pre>ArrayBuffer</code>由二进制字符串生成，于是使用<code v-pre>xlsx</code>库的<code v-pre>write</code>方法生成对应的二进制字符串，<code v-pre>write</code>方法需要参数<code v-pre>wb</code>也就是工作簿，而工作簿最主要的内容就是工作表<code v-pre>ws</code>，而工作表就是通过<code v-pre>sheet_from_array_of_arrays</code>对传入的二维数组进行处理得到的，当然还需要对合并单元格做标记处理、对列宽进行计算保存，这就是这一整套流程的逆推，也是要有这套流程的原因：</p>
+<p><code v-pre>saveAs</code>保存文件-&gt;需要<code v-pre>Blob</code>对象生成-&gt;需要<code v-pre>ArrayBuffer</code>生成-&gt;需要<code v-pre>wbout</code>（二进制字符串）生成-&gt;需要<code v-pre>write</code>方法生成-&gt;需要参数<code v-pre>wb</code>-&gt;需要工作表<code v-pre>ws</code>组成-&gt;需要<code v-pre>sheet_from_array_of_arrays</code>方法生成并进行系列处理-&gt;需要参数二维数组-&gt;用户导入</p>
 <h4 id="函数参数与默认值" tabindex="-1"><a class="header-anchor" href="#函数参数与默认值"><span>函数参数与默认值</span></a></h4>
 <p>首先是函数的参数和默认值，这在<RouteLink to="/guide/theFirstInternship/gain5.html#%E4%BA%86%E8%A7%A3%E6%96%B9%E6%B3%95%E5%92%8C%E5%8F%82%E6%95%B0">之前的文档</RouteLink>里也有讲解</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">export function export_json_to_excel(</span>
@@ -240,13 +321,13 @@
 <span class="line"></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>注意这里把表头、多级表头插入到data前面，说明表头数据也是放到data中一起进行处理的</p>
 <h4 id="生成工作表-worksheet" tabindex="-1"><a class="header-anchor" href="#生成工作表-worksheet"><span>生成工作表（Worksheet）</span></a></h4>
-<p>这部分主要是调用<code v-pre>sheet_from_array_of_arrays</code>函数，将<code v-pre>data</code>转换为<code v-pre>xlsx</code>所需的<code v-pre>Worksheet</code>对象，具体实现看关于<code v-pre>sheet_from_array_of_arrays</code>函数的讲解部分</p>
+<p>这部分主要是调用<code v-pre>sheet_from_array_of_arrays</code>函数，将<code v-pre>data</code>转换为<code v-pre>xlsx</code>所需的<code v-pre>Worksheet</code>对象，具体实现看关于<code v-pre>sheet_from_array_of_arrays</code>函数的<a href="#%E5%85%B3%E4%BA%8Esheet_from_array_of_arrays">讲解部分</a>；而<code v-pre>Workbook</code>是<code v-pre>SheetJS</code>的工作簿对象，具体看<a href="#%E5%85%B3%E4%BA%8Eworkbook">上面的讲解</a>；</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">const wsName = 'SheetJS'</span>
 <span class="line">const wb = new Workbook()</span>
 <span class="line">const ws = sheet_from_array_of_arrays(data) // 将二维数组转为工作表</span>
 <span class="line"></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="合并单元格处理" tabindex="-1"><a class="header-anchor" href="#合并单元格处理"><span>合并单元格处理</span></a></h4>
-<p>这部分是对单元格进行合并，虽然我导出的列表没有用到，但通过举例就能讲清楚它的作用：</p>
+<p>这部分是为工作表添加 “合并范围” 的元数据标记。</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">if (merges.length > 0) {</span>
 <span class="line">  if (!ws['!merges']) ws['!merges'] = [] // 初始化合并范围数组</span>
 <span class="line">  merges.forEach((item) => {</span>
@@ -254,7 +335,9 @@
 <span class="line">  })</span>
 <span class="line">}</span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>想要合并，需要调用方法时就传入合并规则，比如存在这种情况：</p>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>通过导入的数据<code v-pre>merges</code>判断需不需要合并，如果有，先初始化合并范围数组<code v-pre>ws['!merges']</code>，当使用<code v-pre>SheetJS</code>等库将<code v-pre>ws</code>对象导出为<code v-pre>.xlsx</code>文件时，库会读取<code v-pre>!merges</code>中的数据，并在文件中写入对应的合并单元格配置。后面将<code v-pre>merges</code>中的内容均通过<code v-pre>utils.decode_range()</code>方法处理后放入<code v-pre>ws['!merges']</code>当中。<code v-pre>utils.decode_range()</code>是将字符串格式的合并范围（如 <code v-pre>A1:C3</code>）解析为对象格式（如 <code v-pre>{ s: { r: 0, c: 0 }, e: { r: 2, c: 2 } }</code>），其中<code v-pre>s</code>表示起始行列，<code v-pre>e</code>表示结束行列。目的当然是为了符合<code v-pre>SheetJS</code>等库要求的内部数据结构，便于后续生成文件时处理。</p>
+<p>虽然我导出的列表没有用到合并，但通过举例就能讲清楚它的作用：</p>
+<p>想要合并，需要调用方法时就传入合并规则，比如存在这种情况：</p>
 <p>希望产品信息合并1-3三个单元格，销售信息合并4-5两个单元格。</p>
 <p>那么就会设置A1-C1合并，D1-E1合并，最后调用时传入合并规则：</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">const multiHeader = [</span>
@@ -272,7 +355,7 @@
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="自动列宽计算" tabindex="-1"><a class="header-anchor" href="#自动列宽计算"><span>自动列宽计算</span></a></h4>
 <p>这部分是根据该列所有行的内容自动调整列宽，避免内容截断</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">if (autoWidth) {</span>
-<span class="line">  // 1. 计算每列每一行的宽度</span>
+<span class="line">  // 1. 计算每行每一列的宽度</span>
 <span class="line">  const colWidth = data.map((row) => </span>
 <span class="line">    row.map((val) => {</span>
 <span class="line">      if (val === null) return { wch: 10 } // 空值默认宽度10</span>
@@ -301,7 +384,7 @@
 <p>单位<code v-pre>wch</code>：表示列宽，<code v-pre>Excel</code>中<code v-pre>1</code>个字符宽度约等于<code v-pre>7</code>像素。</p>
 <p>提到的双字节字符处理，是因为中文、日文等字符占用<code v-pre>2</code>个字符宽度，因此<code v-pre>str.length * 2</code>。而英文、数字等单字节字符占用 1 个字符宽度。</p>
 <p>关于<code v-pre>ws['!cols']</code>：在<code v-pre>SheetJS</code>（即<code v-pre>XLSX</code>库）中，<code v-pre>!cols</code> 是工作表（<code v-pre>Sheet</code>）对象的一个特殊属性，用于存储列宽配置。它是<code v-pre>SheetJS</code>约定的内部属性名，用于标识列宽信息，类似的还有<code v-pre>!merges</code>（合并单元格）、<code v-pre>!rows</code>（行高）等以<code v-pre>!</code>开头的元数据属性。</p>
-<h4 id="生成文件并下载" tabindex="-1"><a class="header-anchor" href="#生成文件并下载"><span>生成文件并下载</span></a></h4>
+<h4 id="生成文件并下载-1" tabindex="-1"><a class="header-anchor" href="#生成文件并下载-1"><span>生成文件并下载</span></a></h4>
 <p>经过上面对数据的处理，这部分就只是调用函数生成文件并下载了：</p>
 <p><code v-pre>write(wb, options)</code>：使用<code v-pre>xlsx</code>库将工作簿（<code v-pre>wb</code>）转为指定格式的二进制数据。</p>
 <p><code v-pre>s2ab(wbout)</code>：将二进制字符串转为<code v-pre>ArrayBuffer</code>，用于创建<code v-pre>Blob</code>对象。</p>
@@ -309,7 +392,7 @@
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">wb.SheetNames.push(wsName) // 添加工作表名称</span>
 <span class="line">wb.Sheets[wsName] = ws // 将工作表添加到工作簿</span>
 <span class="line"></span>
-<span class="line">// 生成二进制数据</span>
+<span class="line">// 生成二进制字符串</span>
 <span class="line">const wbout = write(wb, {</span>
 <span class="line">  bookType: bookType as BookType, // 文件类型</span>
 <span class="line">  bookSST: false, // 是否生成共享字符串表（默认false）</span>
@@ -322,7 +405,11 @@
 <span class="line">  `${filename}.${bookType}`</span>
 <span class="line">)</span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h2 id="工具的总体实现" tabindex="-1"><a class="header-anchor" href="#工具的总体实现"><span>工具的总体实现</span></a></h2>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>可以看到是通过<em>浏览器的文件操作接口</em>和<code v-pre>Blob</code>对象实现文件保存功能：</p>
+<p><code v-pre>SheetNames</code>是工作表名称数组（控制显示顺序），<code v-pre>Sheets</code>是工作表对象映射（键为表名，值为表数据）</p>
+<p><code v-pre>Blob</code>是<code v-pre>Binary Large Object</code>（二进制大对象），用于存储二进制数据（如文本、图片、二进制文件等）。可以看作是一个不可变的原始数据缓冲区，常见于文件操作、网络请求（如<code v-pre>fetch</code>的响应体）等场景。这里的<code v-pre>Blob([s2ab(),{type}])</code>，关于<code v-pre>s2ab</code>方法和<code v-pre>ArrayBuffer</code>见<a href="#%E5%85%B3%E4%BA%8Es2ab">关于s2ab</a>；<code v-pre>type</code>参数：<code v-pre>application/octet-stream</code>是通用二进制流类型，适用于未知文件类型。</p>
+<p><code v-pre>saveAs</code>函数是<code v-pre>FileSaver.js</code>库提供的核心方法，用于在浏览器中触发文件保存对话框。<code v-pre>saveAs(Blob, filename)</code>执行时，浏览器生成一个临时的<code v-pre>URL</code>指向<code v-pre>Blob</code>对象；触发文件保存对话框，用户可选择保存路径；自动处理文件流的写入，无需前端代码干预。</p>
+<h2 id="工具的总体实现" tabindex="-1"><a class="header-anchor" href="#工具的总体实现"><span>工具的总体实现</span></a></h2>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">import { saveAs } from 'file-saver'</span>
 <span class="line">import { utils, SSF, write, BookType } from 'xlsx'</span>
 <span class="line"></span>
@@ -562,8 +649,6 @@
 <span class="line">  )</span>
 <span class="line">}</span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h2 id="后续要补充的讲解" tabindex="-1"><a class="header-anchor" href="#后续要补充的讲解"><span>后续要补充的讲解：</span></a></h2>
-<p>sheet_from_array_of_arrays函数实现、s2ab实现、<code v-pre>Blob</code>对象是什么、saveAs如何触发浏览器下载，其他各部分其他函数；</p>
-</div></template>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div></div></template>
 
 

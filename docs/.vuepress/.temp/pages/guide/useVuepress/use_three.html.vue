@@ -61,6 +61,19 @@ c:而如果只是一个回车，页面上的b和c是相连的，中间只隔了�
 <p><RouteLink to="/guide/useVuepress/use_two.html#%E5%85%B6%E4%BB%96%E6%96%87%E6%9C%AC%E5%8C%BA%E5%9F%9F%E4%B8%8E%E9%93%BE%E6%8E%A5%E5%86%99%E6%B3%95">锚点链接也可以跨文档</RouteLink></p>
 <p><a href="#test">自定义锚点链接</a></p>
 </details>
+<h4 id="一点注意事项" tabindex="-1"><a class="header-anchor" href="#一点注意事项"><span>一点注意事项</span></a></h4>
+<p>在后续我使用链接的过程中，发现链接无法识别标题下划线，会将标题下划线识别成<code v-pre>-</code>，例如：</p>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line"># 这是一个带有下划线_的标题</span>
+<span class="line"></span>
+<span class="line">[点击跳转到下划线标题](#这是一个带有下划线_的标题)</span>
+<span class="line">[点击跳转到下划线标题](#这是一个带有下划线-的标题)</span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>这两个链接只有使用<code v-pre>-</code>的链接能够被识别并正确使用，使用下划线<code v-pre>_</code>的链接则不能找到标题，无法跳转到对应位置，在演示结果中点击可以看到测试效果，只有第二个链接能正常识别标题并跳转</p>
+<details class="hint-container details"><summary>点击查看演示结果</summary>
+<h1 id="这是一个带有下划线-的标题" tabindex="-1"><a class="header-anchor" href="#这是一个带有下划线-的标题"><span>这是一个带有下划线_的标题</span></a></h1>
+<p><a href="#%E8%BF%99%E6%98%AF%E4%B8%80%E4%B8%AA%E5%B8%A6%E6%9C%89%E4%B8%8B%E5%88%92%E7%BA%BF_%E7%9A%84%E6%A0%87%E9%A2%98">点击跳转到下划线标题</a></p>
+<p><a href="#%E8%BF%99%E6%98%AF%E4%B8%80%E4%B8%AA%E5%B8%A6%E6%9C%89%E4%B8%8B%E5%88%92%E7%BA%BF-%E7%9A%84%E6%A0%87%E9%A2%98">点击跳转到下划线标题</a></p>
+</details>
 <h3 id="斜体字体" tabindex="-1"><a class="header-anchor" href="#斜体字体"><span>斜体字体</span></a></h3>
 <p>我觉得不是很好看，所以不怎么使用，不过写专有名词时还是比较常用的</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">这个是*斜体字*</span>

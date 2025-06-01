@@ -31,16 +31,46 @@
 <h4 id="formatjson按需格式化数据参数" tabindex="-1"><a class="header-anchor" href="#formatjson按需格式化数据参数"><span>formatJson按需格式化数据参数</span></a></h4>
 <p>可以看到最主要的<code v-pre>data</code>数据参数是需要格式化的。原因和我们平时所讲的定义其实紧密相关，比如<code v-pre>Vuex</code>，<code v-pre>Pinia</code>我们都叫状态管理工具，对于数据、变量其实就是状态，比如这里的<em>商品状态</em>、<em>三级分销</em>，存储在状态管理工具中的并不是字符串，而是一些数字，比如这里<code v-pre>1001</code>表示商品处于上架状态，<code v-pre>1002</code>处于下架。当导出<code v-pre>Excel</code>时，当然不能导出数字，而是要导出对应的文字信息。另外，像是上架时间，存储的也是<em>时间戳</em>，需要格式化再导出。</p>
 <p>而这个负责格式化的函数，即<code v-pre>formatJson</code>，就需要自己来完成：</p>
-<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">formatJson函数内容</span>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">const formatJson = (filterVal, jsonData) => {</span>
+<span class="line">  return jsonData.map((v) =></span>
+<span class="line">    filterVal.map((j) => {</span>
+<span class="line">      if(j == 'product_unit_price'){</span>
+<span class="line">        return formatPrice(v)</span>
+<span class="line">      }</span>
+<span class="line">      if (v[j] == null) return null;</span>
+<span class="line">      if (j == 'product_state_id') {</span>
+<span class="line">        if(v[j]===1001){</span>
+<span class="line">          return t('已上架')</span>
+<span class="line">        }else{</span>
+<span class="line">          return t('已下架')</span>
+<span class="line">        }</span>
+<span class="line">      }else if(j == 'product_sale_time'){</span>
+<span class="line">        return timestampToTime(v[j])</span>
+<span class="line">      }else if(j == 'product_dist_enable'){</span>
+<span class="line">        if(v[j]){</span>
+<span class="line">          return t('允许')</span>
+<span class="line">        }else{</span>
+<span class="line">          return t('不允许')</span>
+<span class="line">        }</span>
+<span class="line">      }</span>
+<span class="line">      return v[j]</span>
+<span class="line">    })</span>
+<span class="line">  )</span>
+<span class="line">}</span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p>正如上面介绍过的，我们所需要做的，就是把不适合展示的信息格式转化成适合展示在<code v-pre>Excel</code>中的格式。因此通过两层<code v-pre>map</code>方法，展开各个商品，展开商品内部信息，找出需要调整格式的信息，返回其修改格式后的信息，而不需要修改格式的信息直接返回即可。注意到这里<code v-pre>if(j == 'product_unit_price')</code>的处理被放在了<code v-pre>if (v[j] == null)</code>之前，并且返回值调用了另一个格式化函数<code v-pre>formatPrice</code>，和其他信息不同。这是因为我在导出Excel的过程中发现了一个典型的数据结构不匹配问题，这个放在下面的<a href="#%E8%A7%A3%E5%86%B3%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E4%B8%8D%E5%8C%B9%E9%85%8D%E9%97%AE%E9%A2%98">解决数据结构不匹配问题</a>讲解。</p>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>正如上面介绍过的，我们所需要做的，就是把不适合展示的信息格式转化成适合展示在<code v-pre>Excel</code>中的格式。因此通过两层<code v-pre>map</code>方法，展开各个商品，展开商品内部信息，找出需要调整格式的信息，返回其修改格式后的信息，而不需要修改格式的信息直接返回即可。注意到这里<code v-pre>if(j == 'product_unit_price')</code>的处理被放在了<code v-pre>if (v[j] == null)</code>之前，并且返回值调用了另一个格式化函数<code v-pre>formatPrice</code>，和其他信息不同。这是因为我在导出Excel的过程中发现了一个典型的数据结构不匹配问题，这个放在下面的<a href="#%E8%A7%A3%E5%86%B3%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E4%B8%8D%E5%8C%B9%E9%85%8D%E9%97%AE%E9%A2%98">解决数据结构不匹配问题</a>讲解。</p>
 <h4 id="补充其他参数" tabindex="-1"><a class="header-anchor" href="#补充其他参数"><span>补充其他参数</span></a></h4>
 <p>完成最主要的数据格式化，剩下的简单参数进行补充即可。</p>
 <p>比如<code v-pre>header</code>，根据页面展示的内容，给出<code v-pre>const tHeader = [...]</code>作为文件中各列（属性）名称，后面把<code v-pre>tHeader</code>做为参数导入即可。</p>
 <p>至于<code v-pre>filename</code>、<code v-pre>autoWidth</code>、<code v-pre>bookType</code>，在<code v-pre>state</code>里补充设置好相应内容即可：</p>
-<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">filename、autoWidth、bookType的配置信息</span>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">const state = reactive({</span>
+<span class="line">  ...</span>
+<span class="line">  filename: '商品列表',</span>
+<span class="line">  autoWidth: true,</span>
+<span class="line">  bookType: 'xlsx',</span>
+<span class="line">})</span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><h3 id="补充一下selectrows的实现" tabindex="-1"><a class="header-anchor" href="#补充一下selectrows的实现"><span>补充一下selectRows的实现</span></a></h3>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h3 id="补充一下selectrows的实现" tabindex="-1"><a class="header-anchor" href="#补充一下selectrows的实现"><span>补充一下selectRows的实现</span></a></h3>
 <p>是通过<code v-pre>element-plus</code>对表格中全选框、复选框自带的监听实现的：<code v-pre>el-table</code>中有<code v-pre>@selection-change</code>可监听复选框勾选情况，发生改变时则调用对应的方法，这里设置了<code v-pre>setSelectRows</code></p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">&lt;el-table</span>
 <span class="line">    ...</span>
@@ -57,12 +87,40 @@
 <h3 id="样式调整" tabindex="-1"><a class="header-anchor" href="#样式调整"><span>样式调整</span></a></h3>
 <p>顺便对之前的按钮样式做了修改。在我接手之前，这个代码的写法布局破坏了默认的样式，导致样式混乱。我将不必要的写法抛去，使用默认的布局实现相同的功能，保留默认的样式即可。</p>
 <p>这是原本的代码，为了做一个路由跳转使用了<code v-pre>&lt;ms-link&gt;</code>破坏了布局，下面也用了一个没有必要的<code v-pre>&lt;ms-link&gt;</code>。</p>
-<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">原本ms-link代码</span>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">&lt;ms-search-box-left-panel :span="5"></span>
+<span class="line">  &lt;ms-link to="/add"></span>
+<span class="line">    &lt;el-button v-permissions="{ permission: ['/manage/pt/productBase/edit'] }" :icon="Plus" type="primary"></span>
+<span class="line">      {{ t('添加') }}</span>
+<span class="line">    &lt;/el-button></span>
+<span class="line">  &lt;/ms-link></span>
+<span class="line">  &lt;ms-link to=""></span>
+<span class="line">    &lt;el-button v-permissions="{ permission: ['/manage/pt/productBase/edit'] }" type="success" @click="importEdit"></span>
+<span class="line">      {{ t('导入') }}</span>
+<span class="line">    &lt;/el-button></span>
+<span class="line">    &lt;el-button v-permissions="{ permission: ['/manage/pt/productBase/edit'] }" type="warning" @click="importEditItem"></span>
+<span class="line">      {{ t('批量修改') }}</span>
+<span class="line">    &lt;/el-button></span>
+<span class="line">    &lt;el-button v-permissions="{ permission: ['/manage/pt/productBase/edit'] }" type="warning" @click="handleDelete"></span>
+<span class="line">      {{ t('批量删除') }}</span>
+<span class="line">    &lt;/el-button></span>
+<span class="line">    &lt;el-button v-if="hasSelected" :icon="Top" type="success" @click="batchUpdate(1001)"></span>
+<span class="line">      {{ t('上架') }}</span>
+<span class="line">    &lt;/el-button></span>
+<span class="line">    &lt;el-button v-if="hasSelected" :icon="Bottom" type="danger" @click="batchUpdate(1002)"></span>
+<span class="line">      {{ t('下架') }}</span>
+<span class="line">    &lt;/el-button></span>
+<span class="line">  &lt;/ms-link></span>
+<span class="line">&lt;/ms-search-box-left-panel></span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p>事实上直接给按钮点击后编程式路由跳转就搞定了，删去<code v-pre>&lt;ms-link&gt;</code>就能保持默认布局</p>
-<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">删去ms-link代码</span>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>事实上直接给<em>添加</em>按钮点击后编程式路由跳转就搞定了，删去<code v-pre>&lt;ms-link&gt;</code>就能保持默认布局</p>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">&lt;ms-search-box-left-panel :span="5"></span>
+<span class="line">    &lt;el-button v-permissions="{ permission: ['/manage/pt/productBase/edit'] }" :icon="Plus" type="primary" @click="router.push({path:'/add'})"></span>
+<span class="line">      {{ t('添加') }}</span>
+<span class="line">    &lt;/el-button></span>
+<span class="line">    ...其他按钮</span>
+<span class="line">&lt;/ms-search-box-left-panel></span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><h3 id="解决数据结构不匹配问题" tabindex="-1"><a class="header-anchor" href="#解决数据结构不匹配问题"><span>解决数据结构不匹配问题</span></a></h3>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h3 id="解决数据结构不匹配问题" tabindex="-1"><a class="header-anchor" href="#解决数据结构不匹配问题"><span>解决数据结构不匹配问题</span></a></h3>
 <p>数据结构不匹配是因为在最前面的配置代码中，可以看到<code v-pre>商品单价</code>对应的属性是<code v-pre>product_unit_price</code>，但当<code v-pre>product_unit_price</code>被访问时，返回的结果却是<code v-pre>undefined</code>，我查看了原本的表格是怎么使用<code v-pre>product_unit_price</code>的，然后就找到了原因，先看表格关于商品单价这一列的代码：</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">&lt;el-table-column</span>
 <span class="line">    align="center"</span>
@@ -110,10 +168,6 @@
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>这样就顺利解决了数据结构不匹配的问题了，既能正确导出<code v-pre>Excel</code>表格中所需的商品单价，也能保持表格展示和导出逻辑的一致性</p>
 <h2 id="总结" tabindex="-1"><a class="header-anchor" href="#总结"><span>总结</span></a></h2>
 <p>收获了调用<code v-pre>Excel</code>导出工具导出<code v-pre>Excel</code>文件的做法，这是之前的学习经历中没有做过的内容。学习、了解了导出<code v-pre>Excel</code>表格的库、方法和工具。掌握处理数据结构不匹配问题的方法，顺便复习熟悉了<code v-pre>element-plus</code>中<code v-pre>el-table</code>的<code v-pre>@selection-change</code>的作用。</p>
-<p>ps:后续需要补充更改的地方是：</p>
-<p>1.formatJson按需格式化数据参数 中 的formatJson函数内容</p>
-<p>2.补充其他参数 中 的 filename、autoWidth、bookType的配置信息 与 讲解</p>
-<p>3.补充样式调整 中 修改前后的代码</p>
 </div></template>
 
 
