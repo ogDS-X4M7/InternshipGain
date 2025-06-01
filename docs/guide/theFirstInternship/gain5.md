@@ -47,7 +47,32 @@ import('@/utils/excel').then((excel) => {
 
 而这个负责格式化的函数，即`formatJson`，就需要自己来完成：
 ```
-formatJson函数内容
+const formatJson = (filterVal, jsonData) => {
+  return jsonData.map((v) =>
+    filterVal.map((j) => {
+      if(j == 'product_unit_price'){
+        return formatPrice(v)
+      }
+      if (v[j] == null) return null;
+      if (j == 'product_state_id') {
+        if(v[j]===1001){
+          return t('已上架')
+        }else{
+          return t('已下架')
+        }
+      }else if(j == 'product_sale_time'){
+        return timestampToTime(v[j])
+      }else if(j == 'product_dist_enable'){
+        if(v[j]){
+          return t('允许')
+        }else{
+          return t('不允许')
+        }
+      }
+      return v[j]
+    })
+  )
+}
 ```
 
 正如上面介绍过的，我们所需要做的，就是把不适合展示的信息格式转化成适合展示在`Excel`中的格式。因此通过两层`map`方法，展开各个商品，展开商品内部信息，找出需要调整格式的信息，返回其修改格式后的信息，而不需要修改格式的信息直接返回即可。注意到这里`if(j == 'product_unit_price')`的处理被放在了`if (v[j] == null)`之前，并且返回值调用了另一个格式化函数`formatPrice`，和其他信息不同。这是因为我在导出Excel的过程中发现了一个典型的数据结构不匹配问题，这个放在下面的[解决数据结构不匹配问题](#解决数据结构不匹配问题)讲解。
@@ -59,7 +84,12 @@ formatJson函数内容
 
 至于`filename`、`autoWidth`、`bookType`，在`state`里补充设置好相应内容即可：
 ```
-filename、autoWidth、bookType的配置信息
+const state = reactive({
+  ...
+  filename: '商品列表',
+  autoWidth: true,
+  bookType: 'xlsx',
+})
 ```
 
 ### 补充一下selectRows的实现
@@ -84,11 +114,39 @@ const setSelectRows = (val) => {
 
 这是原本的代码，为了做一个路由跳转使用了`<ms-link>`破坏了布局，下面也用了一个没有必要的`<ms-link>`。
 ```
-原本ms-link代码
+<ms-search-box-left-panel :span="5">
+  <ms-link to="/add">
+    <el-button v-permissions="{ permission: ['/manage/pt/productBase/edit'] }" :icon="Plus" type="primary">
+      {{ t('添加') }}
+    </el-button>
+  </ms-link>
+  <ms-link to="">
+    <el-button v-permissions="{ permission: ['/manage/pt/productBase/edit'] }" type="success" @click="importEdit">
+      {{ t('导入') }}
+    </el-button>
+    <el-button v-permissions="{ permission: ['/manage/pt/productBase/edit'] }" type="warning" @click="importEditItem">
+      {{ t('批量修改') }}
+    </el-button>
+    <el-button v-permissions="{ permission: ['/manage/pt/productBase/edit'] }" type="warning" @click="handleDelete">
+      {{ t('批量删除') }}
+    </el-button>
+    <el-button v-if="hasSelected" :icon="Top" type="success" @click="batchUpdate(1001)">
+      {{ t('上架') }}
+    </el-button>
+    <el-button v-if="hasSelected" :icon="Bottom" type="danger" @click="batchUpdate(1002)">
+      {{ t('下架') }}
+    </el-button>
+  </ms-link>
+</ms-search-box-left-panel>
 ```
-事实上直接给按钮点击后编程式路由跳转就搞定了，删去`<ms-link>`就能保持默认布局
+事实上直接给*添加*按钮点击后编程式路由跳转就搞定了，删去`<ms-link>`就能保持默认布局
 ```
-删去ms-link代码
+<ms-search-box-left-panel :span="5">
+    <el-button v-permissions="{ permission: ['/manage/pt/productBase/edit'] }" :icon="Plus" type="primary" @click="router.push({path:'/add'})">
+      {{ t('添加') }}
+    </el-button>
+    ...其他按钮
+</ms-search-box-left-panel>
 ```
 
 ### 解决数据结构不匹配问题
@@ -145,11 +203,3 @@ const formatJson = (filterVal, jsonData) => {
 
 ## 总结
 收获了调用`Excel`导出工具导出`Excel`文件的做法，这是之前的学习经历中没有做过的内容。学习、了解了导出`Excel`表格的库、方法和工具。掌握处理数据结构不匹配问题的方法，顺便复习熟悉了`element-plus`中`el-table`的`@selection-change`的作用。
-
-ps:后续需要补充更改的地方是：
-
-1.formatJson按需格式化数据参数 中 的formatJson函数内容
-
-2.补充其他参数 中 的 filename、autoWidth、bookType的配置信息 与 讲解
-
-3.补充样式调整 中 修改前后的代码

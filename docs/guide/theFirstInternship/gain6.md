@@ -311,12 +311,6 @@ for (let R = 0; R !== data.length; ++R) {
 
 
 
-
-
-
-
-
-
 ### 关于Workbook
 `Workbook`类是`SheetJS`中组织`Excel`文件内容的核心容器，通过：
 
