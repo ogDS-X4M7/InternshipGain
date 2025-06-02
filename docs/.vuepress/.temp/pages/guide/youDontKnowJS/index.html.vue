@@ -158,6 +158,257 @@
 <p>在 ES5 中被加入的“Strict模式”[^note-strictmode]，有许多与一般/宽松/懒惰模式不同的行为。其中之一就是不允许自动/隐含的全局变量创建。在这种情况下，将不会有全局 <em>作用域</em> 的变量交回给 LHS 查询，并且类似于 RHS 的情况, <em>引擎</em> 将抛出一个 <code v-pre>ReferenceError</code>。</p>
 <p>现在，如果一个 RHS 查询的变量被找到了，但是你试着去做一些这个值不可能做到的事，比如将一个非函数的值作为函数运行，或者引用 <code v-pre>null</code> 或者 <code v-pre>undefined</code> 值的属性，那么 <em>引擎</em> 就会抛出一个不同种类的错误，称为 <code v-pre>TypeError</code>。</p>
 <p><code v-pre>ReferenceError</code> 是关于 <em>作用域</em> 解析失败的，而 <code v-pre>TypeError</code> 暗示着 <em>作用域</em> 解析成功了，但是试图对这个结果进行了一个非法/不可能的动作。</p>
+<h2 id="第二章-欺骗词法作用域" tabindex="-1"><a class="header-anchor" href="#第二章-欺骗词法作用域"><span>第二章-欺骗词法作用域</span></a></h2>
+<p>如果词法作用域是由函数被声明的位置唯一定义的，而且这个位置完全是一个编写时的决定，那么怎么可能有办法在运行时“修改”（也就是，作弊欺骗）词法作用域呢？</p>
+<p>JavaScript 有两种这样的机制。在广大的社区中它们都等同地被认为是让人皱眉头的，在你代码中使用它们是一种差劲儿的做法。但是关于它们的常见的争论经常错过了最重要的一点：<strong>欺骗词法作用域会导致更低下的性能。</strong></p>
+<p>JavaScript 中的 <code v-pre>eval(..)</code> 函数接收一个字符串作为参数值，并将这个字符串的内容看作是好像它已经被实际编写在程序的那个位置上。换句话说，你可以用编程的方式在你编写好的代码内部生成代码，而且你可以运行这个生成的代码，就好像它在编写时就已经在那里了一样。</p>
+<h3 id="eval" tabindex="-1"><a class="header-anchor" href="#eval"><span><code v-pre>eval</code></span></a></h3>
+<p>考虑如下代码：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token parameter">str<span class="token punctuation">,</span> a</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token function">eval</span><span class="token punctuation">(</span> str <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 作弊！</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> a<span class="token punctuation">,</span> b <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> b <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">foo</span><span class="token punctuation">(</span> <span class="token string">"var b = 3;"</span><span class="token punctuation">,</span> <span class="token number">1</span> <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 1 3</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>在 <code v-pre>eval(..)</code> 调用的位置上，字符串 <code v-pre>&quot;var b = 3&quot;</code> 被看作是一直就存在在那里的代码。因为这个代码恰巧声明了一个新的变量 <code v-pre>b</code>，它就修改了现存的 <code v-pre>foo(..)</code> 的词法作用域。事实上，就像上面提到的那样，这个代码实际上在 <code v-pre>foo(..)</code> 内部创建了变量 <code v-pre>b</code>，它遮蔽了声明在外部（全局）作用域中的 <code v-pre>b</code>。</p>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">这部分我想自己总结一下</span>
+<span class="line">这里eval和with在本书原文中、MDN中都看到强调了不要使用，尤其with是直接被废弃的，</span>
+<span class="line">因此我甚至没有摘录关于with的使用介绍，摘录eval也只是了解一下的意思，未来不要使用</span>
+<span class="line">所以这部分内容也不用仔细看，夸张一点说，总体上可以直接看 复习 部分的内容</span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h3 id="性能" tabindex="-1"><a class="header-anchor" href="#性能"><span>性能</span></a></h3>
+<p>JavaScript <em>引擎</em> 在编译阶段期行许多性能优化工作。其中的一些优化原理都归结为实质上在进行词法分析时可以静态地分析代码，并提前决定所有的变量和函数声明都在什么位置，这样在执行期间就可以少花些力气来解析标识符。</p>
+<p>但如果 <em>引擎</em> 在代码中发现一个 <code v-pre>eval(..)</code> 或 <code v-pre>with</code>，它实质上就不得不 <em>假定</em> 自己知道的所有的标识符的位置可能是无效的，因为它不可能在词法分析时就知道你将会向<code v-pre>eval(..)</code>传递什么样的代码来修改词法作用域，或者你可能会向<code v-pre>with</code>传递的对象有什么样的内容来创建一个新的将被查询的词法作用域。</p>
+<p>换句话说，悲观地看，如果 <code v-pre>eval(..)</code> 或 <code v-pre>with</code> 出现，那么它 <em>将</em> 做的几乎所有的优化都会变得没有意义，所以它就会简单地根本不做任何优化。</p>
+<p>你的代码几乎肯定会趋于运行的更慢，只因为你在代码的任何地方引入了一个了 <code v-pre>eval(..)</code> 或 <code v-pre>with</code>。无论 <em>引擎</em> 将在努力限制这些悲观臆测的副作用上表现得多么聪明，<strong>都没有任何办法可以绕过这个事实：没有优化，代码就运行的更慢。</strong></p>
+<h2 id="附录a" tabindex="-1"><a class="header-anchor" href="#附录a"><span>附录A</span></a></h2>
+<details class="hint-container details"><summary>总结和问题发现</summary>
+<p>其实这部分主要是希望让我们明白什么是动态作用域，但我却发现我更不了解词法作用域，动态作用域简而言之就是我之前了解的<code v-pre>this</code>，从调用位置附近层层向上查找，我以为我理解了原型链，结果只是理解了逐层向上，词法作用域没有理解，从调用位置层层向上是动态作用域。词法作用域是静态，和代码结构、编写有关。</p>
+<p>因为之前主要了解了关于this的使用，所以我实际理解的是动态作用域，但通过本书，才了解到<code v-pre>JS</code>只有词法作用域，只是<code v-pre>this</code>和动态作用域关系更紧密；</p>
+<p>非常关键的一句话，摘录了但在这里再次强调：<strong>词法作用域是编写时的，而动态作用域（和 <code v-pre>this</code>）是运行时的</strong>。词法作用域关心的是 <em>函数在何处被声明</em>，但是动态作用域关心的是函数 <em>从何处</em> 被调用。</p>
+<p>因此对于这个代码示例，之所以打印出<code v-pre>2</code>，就是因为<code v-pre>foo</code>函数的词法作用域在定义时就已确定（全局作用域），与<code v-pre>foo</code>的调用位置（本例中在<code v-pre>bar</code>内调用）无关</p>
+</details>
+<p>正如我们在第二章中看到的，词法作用域是一组关于 <em>引擎</em> 如何查询变量和它在何处能够找到变量的规则。词法作用域的关键性质是，它是在代码编写时被定义的（假定你不使用 <code v-pre>eval()</code> 或 <code v-pre>with</code> 作弊的话）。</p>
+<p>动态作用域看起来在暗示，有充分的理由，存在这样一种模型，它的作用域是在运行时被确定的，而不是在编写时静态地确定的。让我们通过代码来说明这样的实际情况：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> a <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 2</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">function</span> <span class="token function">bar</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token keyword">var</span> a <span class="token operator">=</span> <span class="token number">3</span><span class="token punctuation">;</span></span>
+<span class="line">	<span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> a <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">bar</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>在 <code v-pre>foo()</code> 的词法作用域中指向 <code v-pre>a</code> 的 RHS 引用将被解析为全局变量 <code v-pre>a</code>，它将导致输出结果为值 <code v-pre>2</code>。</p>
+<p>如果 JavaScript 拥有动态作用域，当 <code v-pre>foo()</code> 被执行时，<strong>理论上</strong> 下面的代码将得出 <code v-pre>3</code> 作为输出结果。</p>
+<p>要清楚，JavaScript <strong>实际上没有动态作用域</strong>。它拥有词法作用域。就这么简单。但是 <code v-pre>this</code> 机制有些像动态作用域。</p>
+<p>关键的差异：<strong>词法作用域是编写时的，而动态作用域（和 <code v-pre>this</code>）是运行时的</strong>。词法作用域关心的是 <em>函数在何处被声明</em>，但是动态作用域关心的是函数 <em>从何处</em> 被调用。</p>
+<h2 id="第二章-复习" tabindex="-1"><a class="header-anchor" href="#第二章-复习"><span>第二章-复习</span></a></h2>
+<p>在 JavaScript 中有两种机制可以“欺骗”词法作用域：<code v-pre>eval(..)</code> 和 <code v-pre>with</code>。前者可以通过对一个拥有一个或多个声明的“代码”字符串进行求值，来（在运行时）修改现存的词法作用域。后者实质上是通过将一个对象引用看作一个“作用域”，并将这个对象的属性看作作用域中的标识符，（同样，也是在运行时）创建一个全新的词法作用域。</p>
+<p>这些机制的缺点是，它压制了 <em>引擎</em> 在作用域查询上进行编译期优化的能力，因为 <em>引擎</em> 不得不悲观地假定这样的优化是无效的。这两种特性的结果就是代码 <em>将</em> 会运行的更慢。<strong>不要使用它们。</strong></p>
+<h2 id="第三章-隐藏于普通作用域" tabindex="-1"><a class="header-anchor" href="#第三章-隐藏于普通作用域"><span>第三章-隐藏于普通作用域</span></a></h2>
+<p>考虑一个函数的传统方式是，你声明一个函数，并在它内部添加代码。但是相反的想法也同样强大和有用：拿你所编写的代码的任意一部分，在它周围包装一个函数声明，这实质上“隐藏”了这段代码。</p>
+<p>其实际结果是在这段代码周围创建了一个作用域气泡，这意味着现在在这段代码中的任何声明都将绑在这个新的包装函数的作用域上，而不是前一个包含它们的作用域。换句话说，你可以通过将变量和函数围在一个函数的作用域中来“隐藏”它们。</p>
+<p>为什么“隐藏”变量和函数是一种有用的技术？</p>
+<p>有多种原因驱使着这种基于作用域的隐藏。它们主要是由一种称为“最低权限原则”的软件设计原则引起的[^note-leastprivilege]，有时也被称为“最低授权”或“最少曝光”。这个原则规定，在软件设计中，比如一个模块/对象的API，你应当只暴露所需要的最低限度的东西，而“隐藏”其他的一切。</p>
+<p>这个原则可以扩展到用哪个作用域来包含变量和函数的选择。如果所有的变量和函数都在全局作用域中，它们将理所当然地对任何嵌套的作用域来说都是可访问的。但这回违背“最少……”原则，因为你（很可能）暴露了许多你本应当保持为私有的变量和函数，而这些代码的恰当用法是不鼓励访问这些变量/函数的。
+例如：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">doSomething</span><span class="token punctuation">(</span><span class="token parameter">a</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	b <span class="token operator">=</span> a <span class="token operator">+</span> <span class="token function">doSomethingElse</span><span class="token punctuation">(</span> a <span class="token operator">*</span> <span class="token number">2</span> <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> b <span class="token operator">*</span> <span class="token number">3</span> <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">function</span> <span class="token function">doSomethingElse</span><span class="token punctuation">(</span><span class="token parameter">a</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token keyword">return</span> a <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> b<span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">doSomething</span><span class="token punctuation">(</span> <span class="token number">2</span> <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 15</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>在这个代码段中，变量 <code v-pre>b</code> 和函数 <code v-pre>doSomethingElse(..)</code> 很可能是 <code v-pre>doSomething(..)</code> 如何工作的“私有”细节。允许外围的作用域“访问” <code v-pre>b</code> 和 <code v-pre>doSomethingElse(..)</code> 不仅没必要而且可能是“危险的”，因为它们可能会以种种意外的方式，有意或无意地被使用，而这也许违背了 <code v-pre>doSomething(..)</code> 假设的前提条件。</p>
+<p>一个更“恰当”的设计是讲这些私有细节隐藏在<code v-pre>doSomething(..)</code>的作用域内部，比如：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">doSomething</span><span class="token punctuation">(</span><span class="token parameter">a</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token keyword">function</span> <span class="token function">doSomethingElse</span><span class="token punctuation">(</span><span class="token parameter">a</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">		<span class="token keyword">return</span> a <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">;</span></span>
+<span class="line">	<span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line">	<span class="token keyword">var</span> b<span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">	b <span class="token operator">=</span> a <span class="token operator">+</span> <span class="token function">doSomethingElse</span><span class="token punctuation">(</span> a <span class="token operator">*</span> <span class="token number">2</span> <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> b <span class="token operator">*</span> <span class="token number">3</span> <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">doSomething</span><span class="token punctuation">(</span> <span class="token number">2</span> <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 15</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>现在，<code v-pre>b</code> 和 <code v-pre>doSomethingElse(..)</code> 对任何外界影响都是不可访问的，而是仅仅由 <code v-pre>doSomething(..)</code> 控制。它的功能和最终结果不受影响，但是这种设计将私有细节保持为私有的，这通常被认为是好的软件。</p>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">这部分内容我也做一下总结，隐藏简单来说就是用函数包起来，外面不能直接使用</span>
+<span class="line">尤其是函数包函数，函数A内函数B只用来处理函数A内的业务，可以说成为了函数A私有的内容</span>
+<span class="line">当然，具体实现还要看具体需求，比如B是否需要多次复用？是否只在A内复用？</span>
+<span class="line">如果B需要多次复用，才有封装的需求；只在A内复用，才能被A私有。</span>
+<span class="line">所以感觉局限性比较大，但作为好的软件设计，思路还是要了解并记住的</span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h3 id="避免冲突" tabindex="-1"><a class="header-anchor" href="#避免冲突"><span>避免冲突</span></a></h3>
+<p>将变量和函数“隐藏”在一个作用域内部的另一个好处是，避免两个同名但用处不同的标识符之间发生无意的冲突。冲突经常导致值被意外地覆盖。</p>
+<p>例如：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token keyword">function</span> <span class="token function">bar</span><span class="token punctuation">(</span><span class="token parameter">a</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">		i <span class="token operator">=</span> <span class="token number">3</span><span class="token punctuation">;</span> <span class="token comment">// 在外围的for循环的作用域中改变`i`</span></span>
+<span class="line">		console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> a <span class="token operator">+</span> i <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">	<span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line">	<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">var</span> i<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span> i<span class="token operator">&lt;</span><span class="token number">10</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">		<span class="token function">bar</span><span class="token punctuation">(</span> i <span class="token operator">*</span> <span class="token number">2</span> <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 噢，无限循环！</span></span>
+<span class="line">	<span class="token punctuation">}</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p><code v-pre>bar(..)</code> 内部的赋值 <code v-pre>i = 3</code> 意外地覆盖了在 <code v-pre>foo(..)</code> 的for循环中声明的 <code v-pre>i</code>。在这个例子中，这将导致一个无限循环，因为 <code v-pre>i</code> 被设定为固定的值 <code v-pre>3</code>，而它将永远 <code v-pre>&lt; 10</code>。</p>
+<p><code v-pre>bar(..)</code> 内部的赋值需要声明一个本地变量来使用，不论选用什么样的标识符名称。<code v-pre>var i = 3;</code> 将修复这个问题（并将为 <code v-pre>i</code> 创建一个前面提到的“遮蔽变量”声明）。一个 <em>另外的</em> 选项，不是代替的选项，是完全选择另外一个标识符名称，比如 <code v-pre>var j = 3;</code>。但是你的软件设计也许会自然而然地使用相同的标识符名称，所以在这种情况下利用作用域来“隐藏”你的内部声明是你最好/唯一的选择。</p>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">就是说要么用var i = 3；这样作用域就只在bar()中——局部变量，不影响到foo()里的i；</span>
+<span class="line">要么干脆用j；不同名字变量肯定不覆盖</span>
+<span class="line">跟这里讲的隐藏有关系的就是bar里面的i，只要用var i就实现了通过外部包函数(bar)来隐藏的目的</span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="全局-名称空间" tabindex="-1"><a class="header-anchor" href="#全局-名称空间"><span>全局“名称空间”</span></a></h4>
+<p>变量冲突（很可能）发生的一个特别强有力的例子是在全局作用域中。当多个库被加载到你的程序中时，如果它们没有适当地隐藏它们的内部/私有函数和变量，那么它们可以十分容易地互相冲突。</p>
+<p>这样的库通常会在全局作用域中使用一个足够独特的名称来创建一个单独的变量声明，它经常是一个对象。然后这个对象被用作这个库的一个“名称空间”，所有要明确暴露出来的功能都被作为属性挂在这个对象（名称空间）上，而不是将它们自身作为顶层词法作用域的标识符。</p>
+<p>例如：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">var</span> MyReallyCoolLibrary <span class="token operator">=</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token literal-property property">awesome</span><span class="token operator">:</span> <span class="token string">"stuff"</span><span class="token punctuation">,</span></span>
+<span class="line">	<span class="token function-variable function">doSomething</span><span class="token operator">:</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">		<span class="token comment">// ...</span></span>
+<span class="line">	<span class="token punctuation">}</span><span class="token punctuation">,</span></span>
+<span class="line">	<span class="token function-variable function">doAnotherThing</span><span class="token operator">:</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">		<span class="token comment">// ...</span></span>
+<span class="line">	<span class="token punctuation">}</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="模块管理" tabindex="-1"><a class="header-anchor" href="#模块管理"><span>模块管理</span></a></h4>
+<p>另一种回避冲突的选择是通过任意一种依赖管理器，使用更加现代的“模块”方式。使用这些工具，没有库可以向全局作用域添加任何标识符，取而代之的是使用依赖管理器的各种机制，要求库的标识符被明确地导入到另一个指定的作用域中。</p>
+<p>应该可以看到，这些工具并不拥有可以豁免于词法作用域规则的“魔法”功能。它们简单地使用这里讲解的作用域规则，来强制标识符不会被注入任何共享的作用域，而是保持在私有的，不易冲突的作用域中，这防止了任何意外的作用域冲突。</p>
+<h2 id="第三章-函数作为作用域" tabindex="-1"><a class="header-anchor" href="#第三章-函数作为作用域"><span>第三章-函数作为作用域</span></a></h2>
+<p>我们已经看到，我们可以拿来一段代码并在它周围包装一个函数，而这实质上对外部作用域“隐藏”了这个函数内部作用域包含的任何变量或函数声明。</p>
+<p>例如：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">var</span> a <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token comment">// &lt;-- 插入这个</span></span>
+<span class="line"></span>
+<span class="line">	<span class="token keyword">var</span> a <span class="token operator">=</span> <span class="token number">3</span><span class="token punctuation">;</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> a <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 3</span></span>
+<span class="line"></span>
+<span class="line"><span class="token punctuation">}</span> <span class="token comment">// &lt;-- 和这个</span></span>
+<span class="line"><span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// &lt;-- 还有这个</span></span>
+<span class="line"></span>
+<span class="line">console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> a <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 2</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>虽然这种技术“可以工作”，但它不一定非常理想。它引入了几个问题。首先是我们不得不声明一个命名函数 <code v-pre>foo()</code>，这意味着这个标识符名称 <code v-pre>foo</code> 本身就“污染”了外围作用域（在这个例子中是全局）。我们要不得不通过名称（<code v-pre>foo()</code>）明确地调用这个函数来使被包装的代码真正运行。</p>
+<p>如果这个函数不需要名称（或者，这个名称不污染外围作用域），而且如果这个函数能自动地被执行就更理想了。</p>
+<p>幸运的是，JavaScript 给这两个问题提供了一个解决方法。</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">var</span> a <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token punctuation">(</span><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">{</span> <span class="token comment">// &lt;-- 插入这个</span></span>
+<span class="line"></span>
+<span class="line">	<span class="token keyword">var</span> a <span class="token operator">=</span> <span class="token number">3</span><span class="token punctuation">;</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> a <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 3</span></span>
+<span class="line"></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// &lt;-- 和这个</span></span>
+<span class="line"></span>
+<span class="line">console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> a <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 2</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>让我们分析一下这里发生了什么。</p>
+<p>首先注意，与仅仅是 <code v-pre>function...</code> 相对，这个包装函数语句以 <code v-pre>(function...</code> 开头。虽然这看起来像是一个微小的细节，但实际上这是一个重大改变。与将这个函数视为一个标准的声明不同的是，这个函数被视为一个函数表达式。</p>
+<p><strong>注意：</strong> 区分声明与表达式的最简单的方法是，这个语句中（不仅仅是一行，而是一个独立的语句）“function”一词的位置。如果“function”是这个语句中的第一个东西，那么它就是一个函数声明。否则，它就是一个函数表达式。</p>
+<p>这里我们可以观察到一个函数声明和一个函数表达式之间的关键不同是，它的名称作为一个标识符被绑定在何处。</p>
+<p>比较这前两个代码段。在第一个代码段中，名称 <code v-pre>foo</code> 被绑定在外围作用域中，我们用 <code v-pre>foo()</code> 直接调用它。在第二个代码段中，名称 <code v-pre>foo</code> 没有被绑定在外围作用域中，而是被绑定在它自己的函数内部。</p>
+<p>换句话说，<code v-pre>(function foo(){ .. })</code> 作为一个表达式意味着标识符 <code v-pre>foo</code> 仅能在 <code v-pre>..</code> 代表的作用域中被找到，而不是在外部作用域中。将名称 <code v-pre>foo</code> 隐藏在它自己内部意味着它不会没必要地污染外围作用域。</p>
+<details class="hint-container details"><summary>提醒自己一下，上面这部分要仔细看</summary>
+<p>对我来说是很不错的讲解，因为关于立即执行函数的内容都是之前遇到临时学的，并不扎实，现在可以更好地理解了</p>
+<p>虽然原文下面有更详细的关于立即执行函数的讲解，但上面这部分内容对我来说就足够了，下面主要就是一些变种和命名匿名的选择，并不重要，摘抄太多反而啰嗦</p>
+</details>
+<h2 id="第三章-块级作为作用域" tabindex="-1"><a class="header-anchor" href="#第三章-块级作为作用域"><span>第三章-块级作为作用域</span></a></h2>
+<p>这就是有关块级作用域的一切。尽可能靠近地，尽可能局部地，在变量将被使用的位置声明它。另一个例子是：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">var</span> foo <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">if</span> <span class="token punctuation">(</span>foo<span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token keyword">var</span> bar <span class="token operator">=</span> foo <span class="token operator">*</span> <span class="token number">2</span><span class="token punctuation">;</span></span>
+<span class="line">	bar <span class="token operator">=</span> <span class="token function">something</span><span class="token punctuation">(</span> bar <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> bar <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>我们仅在 if 语句的上下文环境中使用变量 <code v-pre>bar</code>，所以我们将它声明在 if 块级的内部是有些道理的。然而，当使用 <code v-pre>var</code> 时，我们在何处声明变量是无关紧要的，因为它们将总是属于外围作用域。这个代码段实质上为了代码风格的原因“假冒”了块级作用域，并依赖于我们要管好自己，不要在这个作用域的其他地方意外地使用 <code v-pre>bar</code>。</p>
+<details class="hint-container details"><summary>总结与注意</summary>
+<p>说了一大堆，这里的<code v-pre>bar</code>仍然是全局变量，<code v-pre>if</code>外仍然可以获取<code v-pre>bar</code>，原因很简单，想要块级作用域得用<code v-pre>let</code>、<code v-pre>const</code>，如果<code v-pre>var</code>这样能实现块级作用域，那<code v-pre>ES6</code>还折腾那么多干嘛？原文的意思是这只是代码风格，依赖于我们自己管理，没有实际块级作用域效果，这里原文写的太啰嗦反而显得容易误导，道理就是我写的这么简单。</p>
+</details>
+<h3 id="try-catch" tabindex="-1"><a class="header-anchor" href="#try-catch"><span><code v-pre>try/catch</code></span></a></h3>
+<p>一个鲜为人知的事实是，JavaScript 在 ES3 中明确指出在 <code v-pre>try/catch</code> 的 <code v-pre>catch</code> 子句中声明的变量，是属于 <code v-pre>catch</code> 块级的块级作用域的。</p>
+<p>例如：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">try</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token keyword">undefined</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">//用非法的操作强制产生一个异常！</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"><span class="token keyword">catch</span> <span class="token punctuation">(</span>err<span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> err <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 好用！</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line">console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> err <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// ReferenceError: `err` not found</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>如你所见，<code v-pre>err</code> 仅存在于 <code v-pre>catch</code> 子句中，并且在你试着从其他地方引用它时抛出一个错误。</p>
+<p><strong>注意：</strong> 虽然这种行为已经被明确规定，而且对于几乎所有的标准JS环境（也许除了老IE）来说都是成立的，但是如果你在同一个作用域中有两个或多个 <code v-pre>catch</code> 子句，而它们又各自用相同的标识符名称声明了它们表示错误的变量时，许多 linter 依然会报警。实际上这不是重定义，因为这些变量都安全地位于块级作用域中，但是 linter 看起来依然会恼人地抱怨这个事实。</p>
+<p>为了避免这些不必要的警告，一些开发者将他们的 <code v-pre>catch</code> 变量命名为 <code v-pre>err1</code>，<code v-pre>err2</code>，等等。另一些开发者干脆关闭 linter 对重复变量名的检查。</p>
+<p><code v-pre>catch</code> 的块级作用域性质看起来像是一个没用的，只有学院派意义的事实，但是参看附录B来了解更多它如何有用的信息。</p>
+<h3 id="let" tabindex="-1"><a class="header-anchor" href="#let"><span><code v-pre>let</code></span></a></h3>
+<h4 id="垃圾回收" tabindex="-1"><a class="header-anchor" href="#垃圾回收"><span>垃圾回收</span></a></h4>
+<p>块级作用域的另一个有用之处是关于闭包和释放内存的垃圾回收。我们将简单地在这里展示一下，但是闭包机制将在第五章中详细讲解。</p>
+<p>考虑这段代码：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">process</span><span class="token punctuation">(</span><span class="token parameter">data</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token comment">// 做些有趣的事</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> someReallyBigData <span class="token operator">=</span> <span class="token punctuation">{</span> <span class="token punctuation">.</span><span class="token punctuation">.</span> <span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">process</span><span class="token punctuation">(</span> someReallyBigData <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> btn <span class="token operator">=</span> document<span class="token punctuation">.</span><span class="token function">getElementById</span><span class="token punctuation">(</span> <span class="token string">"my_button"</span> <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">btn<span class="token punctuation">.</span><span class="token function">addEventListener</span><span class="token punctuation">(</span> <span class="token string">"click"</span><span class="token punctuation">,</span> <span class="token keyword">function</span> <span class="token function">click</span><span class="token punctuation">(</span><span class="token parameter">evt</span><span class="token punctuation">)</span><span class="token punctuation">{</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">"button clicked"</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token comment">/*capturingPhase=*/</span><span class="token boolean">false</span> <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>点击事件的处理器回调函数 <code v-pre>click</code> 根本不 <em>需要</em> <code v-pre>someReallyBigData</code> 变量。这意味着从理论上讲，在 <code v-pre>process(..)</code> 运行之后，这个消耗巨大内存的数据结构可以被作为垃圾回收。然而，JS引擎很可能（虽然这要看具体实现）仍会将这个结构保持一段时间，因为<code v-pre>click</code>函数在整个作用域上拥有一个闭包。</p>
+<p>块级作用域可以解决这个问题，使引擎清楚地知道它不必再保持 <code v-pre>someReallyBigData</code> 了：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">process</span><span class="token punctuation">(</span><span class="token parameter">data</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token comment">// 做些有趣的事</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token comment">// 运行过后，任何定义在这个块中的东西都可以消失了</span></span>
+<span class="line"><span class="token punctuation">{</span></span>
+<span class="line">	<span class="token keyword">let</span> someReallyBigData <span class="token operator">=</span> <span class="token punctuation">{</span> <span class="token punctuation">.</span><span class="token punctuation">.</span> <span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">	<span class="token function">process</span><span class="token punctuation">(</span> someReallyBigData <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> btn <span class="token operator">=</span> document<span class="token punctuation">.</span><span class="token function">getElementById</span><span class="token punctuation">(</span> <span class="token string">"my_button"</span> <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">btn<span class="token punctuation">.</span><span class="token function">addEventListener</span><span class="token punctuation">(</span> <span class="token string">"click"</span><span class="token punctuation">,</span> <span class="token keyword">function</span> <span class="token function">click</span><span class="token punctuation">(</span><span class="token parameter">evt</span><span class="token punctuation">)</span><span class="token punctuation">{</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">"button clicked"</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token comment">/*capturingPhase=*/</span><span class="token boolean">false</span> <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>声明可以将变量绑定在本地的明确的块级是一种强大的工具，你可以把它加入你的工具箱。</p>
+<details class="hint-container details"><summary>总结</summary>
+<p>注意区分这里的<code v-pre>{}</code>达到的效果和<a href="#%E7%AC%AC%E4%B8%89%E7%AB%A0-%E5%9D%97%E7%BA%A7%E4%BD%9C%E4%B8%BA%E4%BD%9C%E7%94%A8%E5%9F%9F">之前</a>在<code v-pre>if</code>内声明变量的那种没有实际作用的效果，就知道关键在于<code v-pre>let</code>了；</p>
+<p>另外，正是有这里<code v-pre>{}</code>的代码块划分的作用，所以之前写<code v-pre>{}=={}</code>会直接报错，因为会被理解成代码块，需要写成<code v-pre>({})==...</code></p>
+</details>
+<h1 id="注意" tabindex="-1"><a class="header-anchor" href="#注意"><span>注意</span></a></h1>
+<p>后续的话把自己的总结等部分内容改用折叠演示结果写，不要用代码模式，不然看起来不舒服而且写的时候总是要顾及每行字体的长度，太麻烦</p>
 </div></template>
 
 
