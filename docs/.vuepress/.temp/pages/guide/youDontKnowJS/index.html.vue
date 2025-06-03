@@ -407,6 +407,196 @@
 <p>注意区分这里的<code v-pre>{}</code>达到的效果和<a href="#%E7%AC%AC%E4%B8%89%E7%AB%A0-%E5%9D%97%E7%BA%A7%E4%BD%9C%E4%B8%BA%E4%BD%9C%E7%94%A8%E5%9F%9F">之前</a>在<code v-pre>if</code>内声明变量的那种没有实际作用的效果，就知道关键在于<code v-pre>let</code>了；</p>
 <p>另外，正是有这里<code v-pre>{}</code>的代码块划分的作用，所以之前写<code v-pre>{}=={}</code>会直接报错，因为会被理解成代码块，需要写成<code v-pre>({})==...</code></p>
 </details>
+<h2 id="第四章-函数优先" tabindex="-1"><a class="header-anchor" href="#第四章-函数优先"><span>第四章-函数优先</span></a></h2>
+<details class="hint-container details"><summary>提示修正</summary>
+<p>这个章节讲的是提升，有变量提升、函数提升，我比较熟悉，看过一遍感觉没什么需要摘抄的，不过遇到一个比较疑惑的点，经过验证我的想法是对的，而书中也提到未来会修改，看来对于当时而言的“未来的修改”在我读这本书的时候已经到来了</p>
+<p>对于我阅读并发现异常的时候，下面的代码运行时已经会报错：<code v-pre>Uncaught TypeError: foo is not a function</code>，并不会给出注释的“b”</p>
+<p>原因很简单，如果这个<code v-pre>function</code>的声明会提升，那<code v-pre>if(a)</code>也会提前执行，这显然违反常理，这部分代码就应该自上而下正常执行，按序<code v-pre>a</code>被赋值，然后进入判定语句，最后根据<code v-pre>a</code>给出函数声明；那么最开始调用的时候<code v-pre>foo</code>当然还没有声明，一定会报错。</p>
+<p>下面是原文</p>
+</details>
+<p>在同一个作用域内的重复定义是一个十分差劲儿的主意，而且经常会导致令人困惑的结果。</p>
+<p>在普通的块级内部出现的函数声明一般会被提升至外围的作用域，而不是像这段代码暗示的那样有条件地被定义：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// "b"</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> a <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token keyword">if</span> <span class="token punctuation">(</span>a<span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">   <span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> <span class="token string">"a"</span> <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"><span class="token keyword">else</span> <span class="token punctuation">{</span></span>
+<span class="line">   <span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> <span class="token string">"b"</span> <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>然而，重要的是要注意这种行为是不可靠的，而且是未来版本的 JavaScript 将要改变的对象，所以避免在块级中声明函数可能是最好的做法。（再次提醒，这里有误，要看我写的修正！）</p>
+<h2 id="第五章-事实真相" tabindex="-1"><a class="header-anchor" href="#第五章-事实真相"><span>第五章-事实真相</span></a></h2>
+<p>为了理解和识别闭包，这里有一个你需要知道的简单粗暴的定义：</p>
+<blockquote>
+<p>闭包就是函数能够记住并访问它的词法作用域，即使当这个函数在它的词法作用域之外执行时。</p>
+</blockquote>
+<p>让我们跳进代码来说明这个定义：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token keyword">var</span> a <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">	<span class="token keyword">function</span> <span class="token function">bar</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">		console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> a <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 2</span></span>
+<span class="line">	<span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line">	<span class="token function">bar</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>根据我们对嵌套作用域的讨论，这段代码应当看起来很熟悉。由于词法作用域查询规则（在这个例子中，是一个 RHS 引用查询），函数 <code v-pre>bar()</code> 可以 <em>访问</em> 外围作用域的变量 <code v-pre>a</code>。</p>
+<p>这是“闭包”吗？</p>
+<p>好吧，从技术上讲…… <em>也许是</em>。但是根据我们上面的“你需要知道”的定义…… <em>不确切</em>。我认为解释 <code v-pre>bar()</code> 引用 <code v-pre>a</code> 的最准确的方式是根据词法作用域查询规则，但是那些规则 <em>仅仅</em> 是闭包的（一个很重要的！）<strong>一部分</strong>。</p>
+<p>从纯粹的学院派角度讲，上面的代码段被认为是函数 <code v-pre>bar()</code> 在函数 <code v-pre>foo()</code> 的作用域上有一个 <em>闭包</em>（而且实际上，它甚至对其他的作用域也可以访问，比如这个例子中的全局作用域）。换一种略有不同的说法是，<code v-pre>bar()</code> 闭住了 <code v-pre>foo()</code> 的作用域。为什么？因为 <code v-pre>bar()</code> 嵌套地出现在 <code v-pre>foo()</code> 内部。就这么简单。</p>
+<p>但是，这样一来闭包的定义就是不能直接 <em>观察到</em> 的了，我们也不能看到闭包在这个代码段中 <em>被行使</em>。我们清楚地看到词法作用域，但是闭包仍然像代码后面谜一般的模糊阴影。</p>
+<details class="hint-container details"><summary>简化</summary>
+<p>上面这部分啰嗦的内容有些多余，主要是和下面的代码对比，上面的代码也是闭包，但是效果不够明显，下面的效果比较明显。这段话就是我说的这个意思</p>
+<p>重点在于理解上面的定义</p>
+</details>
+<p>让我们考虑这段将闭包完全带到聚光灯下的代码：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token keyword">var</span> a <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">	<span class="token keyword">function</span> <span class="token function">bar</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">		console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> a <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">	<span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line">	<span class="token keyword">return</span> bar<span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> baz <span class="token operator">=</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">baz</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 2 -- 哇噢，看到闭包了，伙计。</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>函数 <code v-pre>bar()</code> 对于 <code v-pre>foo()</code> 内的作用域拥有词法作用域访问权。但是之后，我们拿起 <code v-pre>bar()</code>，这个函数本身，将它像 <em>值</em> 一样传递。在这个例子中，我们 <code v-pre>return</code> <code v-pre>bar</code> 引用的函数对象本身。</p>
+<p>在执行 <code v-pre>foo()</code> 之后，我们将它返回的值（我们的内部 <code v-pre>bar()</code> 函数）赋予一个称为 <code v-pre>baz</code> 的变量，然后我们实际地调用 <code v-pre>baz()</code>，这将理所当然地调用我们内部的函数 <code v-pre>bar()</code>，只不过是通过一个不同的标识符引用。</p>
+<p><code v-pre>bar()</code> 被执行了，必然的。但是在这个例子中，它是在它被声明的词法作用域 <em>外部</em> 被执行的。</p>
+<p><code v-pre>foo()</code> 被执行之后，一般说来我们会期望 <code v-pre>foo()</code> 的整个内部作用域都将消失，因为我们知道 <em>引擎</em> 启用了 <em>垃圾回收器</em> 在内存不再被使用时来回收它们。因为很显然 <code v-pre>foo()</code> 的内容不再被使用了，所以看起来它们很自然地应该被认为是 <em>消失了</em>。</p>
+<p>但是闭包的“魔法”不会让这发生。内部的作用域实际上 <em>依然</em> “在使用”，因此将不会消失。谁在使用它？<strong>函数 <code v-pre>bar()</code> 本身。</strong></p>
+<p>有赖于它被声明的位置，<code v-pre>bar()</code> 拥有一个词法作用域闭包覆盖着 <code v-pre>foo()</code> 的内部作用域，闭包为了能使 <code v-pre>bar()</code> 在以后任意的时刻可以引用这个作用域而保持它的存在。</p>
+<p><strong><code v-pre>bar()</code> 依然拥有对那个作用域的引用，而这个引用称为闭包。</strong></p>
+<p>所以，在几微秒之后，当变量 <code v-pre>baz</code> 被调用时（调用我们最开始标记为 <code v-pre>bar</code> 的内部函数），它理所应当地对编写时的词法作用域拥有 <em>访问</em> 权，所以它可以如我们所愿地访问变量 <code v-pre>a</code>。</p>
+<p>这个函数在它被编写时的词法作用域之外被调用。<strong>闭包</strong> 使这个函数可以继续访问它在编写时被定义的词法作用域。</p>
+<p>当然，函数可以被作为值传递，而且实际上在其他位置被调用的所有各种方式，都是观察/行使闭包的例子。</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token keyword">var</span> a <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">	<span class="token keyword">function</span> <span class="token function">baz</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">		console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> a <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 2</span></span>
+<span class="line">	<span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line">	<span class="token function">bar</span><span class="token punctuation">(</span> baz <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">function</span> <span class="token function">bar</span><span class="token punctuation">(</span><span class="token parameter">fn</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token function">fn</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 看妈妈，我看到闭包了！</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>我们将内部函数 <code v-pre>baz</code> 传递给 <code v-pre>bar</code>，并调用这个内部函数（现在被标记为 <code v-pre>fn</code>），当我们这么做时，它覆盖在 <code v-pre>foo()</code> 内部作用域的闭包就可以通过 <code v-pre>a</code> 的访问观察到。</p>
+<p>这样的函数传递也可以是间接的。</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">var</span> fn<span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token keyword">var</span> a <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">	<span class="token keyword">function</span> <span class="token function">baz</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">		console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> a <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">	<span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line">	fn <span class="token operator">=</span> baz<span class="token punctuation">;</span> <span class="token comment">// 将`baz`赋值给一个全局变量</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">function</span> <span class="token function">bar</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token function">fn</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 看妈妈，我看到闭包了！</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">bar</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 2</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>无论我们使用什么方法将内部函数 <em>传送</em> 到它的词法作用域之外，它都将维护一个指向它最开始被声明时的作用域的引用，而且无论我们什么时候执行它，这个闭包就会被行使。</p>
+<h2 id="第五章-现在我能看到了" tabindex="-1"><a class="header-anchor" href="#第五章-现在我能看到了"><span>第五章-现在我能看到了</span></a></h2>
+<p>前面的代码段有些学术化，而且是人工构建来说明 <em>闭包的使用</em> 的。但我保证过给你的东西不止是一个新的酷玩具。我保证过闭包是在你的现存代码中无处不在的东西。现在让我们 <em>看看</em> 真相。</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">wait</span><span class="token punctuation">(</span><span class="token parameter">message</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line"></span>
+<span class="line">	<span class="token function">setTimeout</span><span class="token punctuation">(</span> <span class="token keyword">function</span> <span class="token function">timer</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">{</span></span>
+<span class="line">		console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> message <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">	<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">1000</span> <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">wait</span><span class="token punctuation">(</span> <span class="token string">"Hello, closure!"</span> <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>我们拿来一个内部函数（名为 <code v-pre>timer</code>）将它传递给 <code v-pre>setTimeout(..)</code>。但是 <code v-pre>timer</code> 拥有覆盖 <code v-pre>wait(..)</code> 的作用域的闭包，实际上保持并使用着对变量 <code v-pre>message</code> 的引用。</p>
+<p>在我们执行 <code v-pre>wait(..)</code> 一千毫秒之后，要不是内部函数 <code v-pre>timer</code> 依然拥有覆盖着 <code v-pre>wait()</code> 内部作用域的闭包，它早就会消失了。</p>
+<p>在 <em>引擎</em> 的内脏深处，内建的工具 <code v-pre>setTimeout(..)</code> 拥有一些参数的引用，可能称为 <code v-pre>fn</code> 或者 <code v-pre>func</code> 或者其他诸如此类的东西。<em>引擎</em> 去调用这个函数，它调用我们的内部 <code v-pre>timer</code> 函数，而词法作用域依然完好无损。</p>
+<details class="hint-container details"><summary>解析</summary>
+<p>这部分内容的描述看起来有点抽象，我看的时候有点迷糊，主要还是没有谨记、紧扣闭包的定义：</p>
+<blockquote>
+<p>闭包就是函数能够记住并访问它的词法作用域，即使当这个函数在它的词法作用域之外执行时。</p>
+</blockquote>
+<p>另外，我还需要记得词法作用域的关键性质是，它是在代码编写时被定义的，静态的，与代码编写结构有关的！</p>
+<p>因此这里很明显：内部函数 <code v-pre>timer</code> 依然拥有覆盖着 <code v-pre>wait()</code> 内部作用域的闭包，也就是<code v-pre>timer</code>函数是 “捕获” 了<code v-pre>wait</code>函数的作用域，它引用了外部变量<code v-pre>message</code>，因此记住了词法作用域在<code v-pre>wait()</code> 内部，就是这么个意思。</p>
+</details>
+<p>实质上 <em>无论何时何地</em> 只要你将函数作为头等的值看待并将它们传来传去的话，你就可能看到这些函数行使闭包。计时器、事件处理器、Ajax请求、跨窗口消息、web worker、或者任何其他的异步（或同步！）任务，当你传入一个 <em>回调函数</em>，你就在它周围悬挂了一些闭包！</p>
+<details class="hint-container details"><summary>解析</summary>
+<p>这里我注意到原文写的是一些闭包，在这里解析一下为什么会说一些闭包：</p>
+<p><strong>闭包数量的决定因素如下：</strong></p>
+<p><strong>每次函数定义都会创建新闭包：</strong>
+无论在循环中、事件监听中，还是作为返回值，函数每定义一次就会创建一个新的闭包实例。</p>
+<p><strong>闭包捕获的是变量引用：</strong>
+闭包捕获的变量是否独立，取决于变量的作用域（如 let 与 var 的区别）。</p>
+<p><strong>异步任务中的闭包更隐蔽：</strong>
+异步回调（如定时器、事件监听）的闭包会在未来执行，容易忽略其捕获的变量状态。</p>
+<p>闭包的数量与<strong>函数定义的次数</strong>直接相关，而不是调用次数。一定记住是<strong>定义次数</strong></p>
+<p><strong>示例：多次调用同一函数生成多个闭包</strong></p>
+<p><strong>注意：</strong> 如果改成<code v-pre>var</code>，也是两个闭包，因为每次调用都会开辟一个空间，不要误会和循环一样了。</p>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">function createCounter() {</span>
+<span class="line">  let count = 0;</span>
+<span class="line">  return function() {</span>
+<span class="line">    return ++count; // 闭包捕获 count</span>
+<span class="line">  };</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">const counterA = createCounter(); // 闭包A</span>
+<span class="line">const counterB = createCounter(); // 闭包B</span>
+<span class="line"></span>
+<span class="line">console.log(counterA()); // 1</span>
+<span class="line">console.log(counterA()); // 2</span>
+<span class="line">console.log(counterB()); // 1（闭包B的 count 独立）</span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>再来一些典型场景：</p>
+<p><strong>循环中的闭包（最容易产生多个闭包）</strong></p>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">function createTimers() {</span>
+<span class="line">  const timers = [];</span>
+<span class="line">  for (let i = 0; i &lt; 3; i++) {</span>
+<span class="line">    timers.push(() => {</span>
+<span class="line">      console.log(i); // 闭包捕获了每次循环的 i</span>
+<span class="line">    });</span>
+<span class="line">  }</span>
+<span class="line">  return timers;</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">const [timer1, timer2, timer3] = createTimers();</span>
+<span class="line">timer1(); // 0</span>
+<span class="line">timer2(); // 1</span>
+<span class="line">timer3(); // 2</span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p><strong>事件监听器中的多个闭包</strong></p>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">function setupButtons() {</span>
+<span class="line">  const buttons = document.querySelectorAll("button");</span>
+<span class="line">  </span>
+<span class="line">  buttons.forEach((button, index) => {</span>
+<span class="line">    button.addEventListener("click", () => {</span>
+<span class="line">      console.log(`Button ${index} clicked`); // 闭包捕获 index</span>
+<span class="line">    });</span>
+<span class="line">  });</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">setupButtons(); // 假设页面有3个按钮</span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div></details>
 <h1 id="注意" tabindex="-1"><a class="header-anchor" href="#注意"><span>注意</span></a></h1>
 <p>后续的话把自己的总结等部分内容改用折叠演示结果写，不要用代码模式，不然看起来不舒服而且写的时候总是要顾及每行字体的长度，太麻烦</p>
 </div></template>
