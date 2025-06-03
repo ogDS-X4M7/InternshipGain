@@ -568,6 +568,7 @@
 <span class="line"></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>再来一些典型场景：</p>
 <p><strong>循环中的闭包（最容易产生多个闭包）</strong></p>
+<p>如果这里改成<code v-pre>var i</code>就会输出三个<code v-pre>i</code>了，因为注意到这里<code v-pre>timer</code>放进三个箭头函数，使用<code v-pre>var</code>的话指向一个作用域，后续箭头函数被调用，访问作用域取到的就是3</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">function createTimers() {</span>
 <span class="line">  const timers = [];</span>
 <span class="line">  for (let i = 0; i &lt; 3; i++) {</span>
