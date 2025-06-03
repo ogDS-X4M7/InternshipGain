@@ -47,6 +47,12 @@ export default defineUserConfig({
           prefix: 'useVuepress/',
           children: ['index', 'use_one', 'use_two', 'use_three'],
         },
+        {
+          text: '你不知道的JS摘录',
+          collapsible: true,
+          prefix: 'youDontKnowJS/',
+          children: ['index', 'excerpt1', 'excerpt2'],
+        }
       ],
     },
   }),

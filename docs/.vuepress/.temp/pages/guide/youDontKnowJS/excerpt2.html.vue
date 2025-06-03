@@ -1,0 +1,305 @@
+<template><div><h1 id="你不知道的js-摘录-this与对象原型" tabindex="-1"><a class="header-anchor" href="#你不知道的js-摘录-this与对象原型"><span>你不知道的JS-摘录-this与对象原型</span></a></h1>
+<details class="hint-container details"><summary>个人见解</summary>
+<p>对于<code v-pre>this</code>我个人是比较了解和熟悉的，所以可能摘抄内容不会太多，甚至重点会跑到其他内容上去</p>
+</details>
+<h2 id="摘自第一章-为什么要用this" tabindex="-1"><a class="header-anchor" href="#摘自第一章-为什么要用this"><span>摘自第一章-为什么要用this?</span></a></h2>
+<p>让我们试着展示一下 <code v-pre>this</code> 的动机和用途：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">identify</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span>name<span class="token punctuation">.</span><span class="token function">toUpperCase</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">function</span> <span class="token function">speak</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token keyword">var</span> greeting <span class="token operator">=</span> <span class="token string">"Hello, I'm "</span> <span class="token operator">+</span> <span class="token function">identify</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span> <span class="token keyword">this</span> <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> greeting <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> me <span class="token operator">=</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token literal-property property">name</span><span class="token operator">:</span> <span class="token string">"Kyle"</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> you <span class="token operator">=</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token literal-property property">name</span><span class="token operator">:</span> <span class="token string">"Reader"</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">identify</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span> me <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// KYLE</span></span>
+<span class="line"><span class="token function">identify</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span> you <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// READER</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">speak</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span> me <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// Hello, I'm KYLE</span></span>
+<span class="line"><span class="token function">speak</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span> you <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// Hello, I'm READER</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><details class="hint-container details"><summary>关于call</summary>
+<p>摘抄这一段我完全理解<code v-pre>this</code>的使用，但我对于<code v-pre>call</code>并不熟悉，这段代码运行结果是输出<code v-pre>Hello, I'm KYLE</code>和<code v-pre>Hello, I'm READER</code>；</p>
+<p><code v-pre>call</code>方法会以给定的<code v-pre>this</code>值和逐个提供的参数调用该函数(MDN定义)，它的传入参数第一个是绑定的对象，要调用该方法的对象，也是后续的<code v-pre>this</code>；如果后续还有第二、第三个参数的话，则是对应该方法所需的参数。</p>
+<p>关于<code v-pre>this</code>我一直理解认为，谁调用参数，谁就是<code v-pre>this</code>。因此从上面的<code v-pre>call</code>方法定义，很容易明白这里的<code v-pre>this</code>就是第一个传入参数，<code v-pre>call</code>方法可以理解为就是被传入的第一个参数调用的，只是写法是<code v-pre>xxx.call(obj)</code>而已，算是一个格式比较特殊的方法吧。那么因此，对于<code v-pre>identify</code>调用后会<code v-pre>return</code>返回给调用者<code v-pre>me</code>和<code v-pre>you</code>，这样的东西当然不会有任何反应和输出；只是返回结果是他们的<code v-pre>name</code>修改为大写的字符串；而<code v-pre>speak</code>里再次调用<code v-pre>identify</code>，还将返回结果拼接成字符串打印出来，那当然就有输出了；所以运行结果是输出<code v-pre>Hello, I'm KYLE</code>和<code v-pre>Hello, I'm READER</code>；</p>
+</details>
+<h2 id="摘自第一章-什么是-this" tabindex="-1"><a class="header-anchor" href="#摘自第一章-什么是-this"><span>摘自第一章-什么是 <code v-pre>this</code>？</span></a></h2>
+<p>当一个函数被调用时，会建立一个称为执行环境的活动记录。这个记录包含函数是从何处（调用栈 —— call-stack）被调用的，函数是 <em>如何</em> 被调用的，被传递了什么参数等信息。这个记录的属性之一，就是在函数执行期间将被使用的 <code v-pre>this</code> 引用。</p>
+<p>下一章中，我们将会学习寻找函数的 <strong>调用点（call-site）</strong> 来判定它的执行如何绑定 <code v-pre>this</code>。</p>
+<h2 id="摘自第二章-仅仅是规则" tabindex="-1"><a class="header-anchor" href="#摘自第二章-仅仅是规则"><span>摘自第二章-仅仅是规则</span></a></h2>
+<h3 id="隐含绑定-implicit-binding" tabindex="-1"><a class="header-anchor" href="#隐含绑定-implicit-binding"><span>隐含绑定（Implicit Binding）</span></a></h3>
+<p>另一种要考虑的规则是：调用点是否有一个环境对象（context object），也称为拥有者（owning）或容器（containing）对象，虽然这些名词可能有些误导人。</p>
+<p>考虑这段代码：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> <span class="token keyword">this</span><span class="token punctuation">.</span>a <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> obj <span class="token operator">=</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token literal-property property">a</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span></span>
+<span class="line">	<span class="token literal-property property">foo</span><span class="token operator">:</span> foo</span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">obj<span class="token punctuation">.</span><span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 2</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>首先，注意 <code v-pre>foo()</code> 被声明然后作为引用属性添加到 <code v-pre>obj</code> 上的方式。无论 <code v-pre>foo()</code> 是否一开始就在 <code v-pre>obj</code> 上被声明，还是后来作为引用添加（如上面代码所示），这个 <strong>函数</strong> 都不被 <code v-pre>obj</code> 所真正“拥有”或“包含”。</p>
+<p>然而，调用点 <em>使用</em> <code v-pre>obj</code> 环境来 <strong>引用</strong> 函数，所以你 <em>可以说</em> <code v-pre>obj</code> 对象在函数被调用的时间点上“拥有”或“包含”这个 <strong>函数引用</strong>。</p>
+<p>不论你怎样称呼这个模式，在 <code v-pre>foo()</code> 被调用的位置上，它被冠以一个指向 <code v-pre>obj</code> 的对象引用。当一个方法引用存在一个环境对象时，<em>隐含绑定</em> 规则会说：是这个对象应当被用于这个函数调用的 <code v-pre>this</code> 绑定。</p>
+<p>因为 <code v-pre>obj</code> 是 <code v-pre>foo()</code> 调用的 <code v-pre>this</code>，所以 <code v-pre>this.a</code> 就是 <code v-pre>obj.a</code> 的同义词。</p>
+<details class="hint-container details"><summary>个人见解</summary>
+<p>这一段讲得还是有点弯弯绕绕，就是说<code v-pre>obj</code>并不是真的有<code v-pre>foo()</code>函数，这是当然的，函数是引用类型，定义声明不在<code v-pre>obj</code>内，只能说<code v-pre>obj.foo()</code>只是暂时引用借用了一下，在<code v-pre>obj</code> 环境下调用了一下<code v-pre>foo()</code>；至于<code v-pre>this</code>问题，还是和我一直以来认为的一样，谁调用<code v-pre>this</code>就指向谁。这里是<code v-pre>obj</code>调用当然就指向<code v-pre>obj</code>，</p>
+<p>下面的内容有点作用，相当于更深入理解一下谁调用指向谁的问题：<code v-pre>obj1.obj2.foo()</code>这样的的写法调用者是<code v-pre>obj2</code></p>
+</details>
+<p>只有对象属性引用链的最后一层是影响调用点的。比如：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> <span class="token keyword">this</span><span class="token punctuation">.</span>a <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> obj2 <span class="token operator">=</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token literal-property property">a</span><span class="token operator">:</span> <span class="token number">42</span><span class="token punctuation">,</span></span>
+<span class="line">	<span class="token literal-property property">foo</span><span class="token operator">:</span> foo</span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> obj1 <span class="token operator">=</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token literal-property property">a</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span></span>
+<span class="line">	<span class="token literal-property property">obj2</span><span class="token operator">:</span> obj2</span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">obj1<span class="token punctuation">.</span>obj2<span class="token punctuation">.</span><span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 42</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="隐含丢失-implicitly-lost" tabindex="-1"><a class="header-anchor" href="#隐含丢失-implicitly-lost"><span>隐含丢失（Implicitly Lost）</span></a></h4>
+<p><code v-pre>this</code> 绑定最常让人沮丧的事情之一，就是当一个 <em>隐含绑定</em> 丢失了它的绑定，这通常意味着它会退回到 <em>默认绑定</em>， 根据 <code v-pre>strict mode</code> 的状态，其结果不是全局对象就是 <code v-pre>undefined</code>。</p>
+<p>考虑这段代码：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> <span class="token keyword">this</span><span class="token punctuation">.</span>a <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> obj <span class="token operator">=</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token literal-property property">a</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span></span>
+<span class="line">	<span class="token literal-property property">foo</span><span class="token operator">:</span> foo</span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> bar <span class="token operator">=</span> obj<span class="token punctuation">.</span>foo<span class="token punctuation">;</span> <span class="token comment">// 函数引用！</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> a <span class="token operator">=</span> <span class="token string">"oops, global"</span><span class="token punctuation">;</span> <span class="token comment">// `a` 也是一个全局对象的属性</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">bar</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// "oops, global"</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>尽管 <code v-pre>bar</code> 似乎是 <code v-pre>obj.foo</code> 的引用，但实际上它只是另一个 <code v-pre>foo</code> 本身的引用而已。另外，起作用的调用点是 <code v-pre>bar()</code>，一个直白，毫无修饰的调用，因此 <em>默认绑定</em> 适用于这里。</p>
+<p>这种情况发生的更加微妙，更常见，而且更意外的方式，是当我们考虑传递一个回调函数时：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> <span class="token keyword">this</span><span class="token punctuation">.</span>a <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">function</span> <span class="token function">doFoo</span><span class="token punctuation">(</span><span class="token parameter">fn</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token comment">// `fn` 只不过 `foo` 的另一个引用</span></span>
+<span class="line"></span>
+<span class="line">	<span class="token function">fn</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// &lt;-- 调用点!</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> obj <span class="token operator">=</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token literal-property property">a</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span></span>
+<span class="line">	<span class="token literal-property property">foo</span><span class="token operator">:</span> foo</span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> a <span class="token operator">=</span> <span class="token string">"oops, global"</span><span class="token punctuation">;</span> <span class="token comment">// `a` 也是一个全局对象的属性</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">doFoo</span><span class="token punctuation">(</span> obj<span class="token punctuation">.</span>foo <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// "oops, global"</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>参数传递仅仅是一种隐含的赋值，而且因为我们在传递一个函数，它是一个隐含的引用赋值，所以最终结果和我们前一个代码段一样。</p>
+<p>那么如果接收你所传递回调的函数不是你的，而是语言内建的呢？没有区别，同样的结果。</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> <span class="token keyword">this</span><span class="token punctuation">.</span>a <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> obj <span class="token operator">=</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token literal-property property">a</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span></span>
+<span class="line">	<span class="token literal-property property">foo</span><span class="token operator">:</span> foo</span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> a <span class="token operator">=</span> <span class="token string">"oops, global"</span><span class="token punctuation">;</span> <span class="token comment">// `a` 也是一个全局对象的属性</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">setTimeout</span><span class="token punctuation">(</span> obj<span class="token punctuation">.</span>foo<span class="token punctuation">,</span> <span class="token number">100</span> <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// "oops, global"</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>把这个粗糙的，理论上的 <code v-pre>setTimeout()</code> 假想实现当做 JavaScript 环境内建的实现的话：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">setTimeout</span><span class="token punctuation">(</span><span class="token parameter">fn<span class="token punctuation">,</span>delay</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">  <span class="token comment">// （通过某种方法）等待 `delay` 毫秒</span></span>
+<span class="line">	<span class="token function">fn</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// &lt;-- 调用点!</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>正如我们刚刚看到的，我们的回调函数丢掉他们的 <code v-pre>this</code> 绑定是十分常见的事情。但是 <code v-pre>this</code> 使我们吃惊的另一种方式是，接收我们回调的函数故意改变调用的 <code v-pre>this</code>。那些很流行的 JavaScript 库中的事件处理器就十分喜欢强制你的回调的 <code v-pre>this</code> 指向触发事件的 DOM 元素。虽然有时这很有用，但其他时候这简直能气死人。不幸的是，这些工具很少给你选择。</p>
+<p>不管哪一种意外改变 <code v-pre>this</code> 的方式，你都不能真正地控制你的回调函数引用将如何被执行，所以你（还）没有办法控制调用点给你一个故意的绑定。我们很快就会看到一个方法，通过 <em>固定</em> <code v-pre>this</code> 来解决这个问题。</p>
+<details class="hint-container details"><summary>非常棒且有用的一部分！</summary>
+<p>这一段对引用的使用造成的结果出乎我的意料；这和之前讲到的<code v-pre>obj.foo</code>并不意味着<code v-pre>obj</code>拥有<code v-pre>foo</code>而只是引用直接相关，所以说关键就在于<code v-pre>obj{foo:foo};</code>，而<code v-pre>foo</code>的声明定义在全局下。如果<code v-pre>obj.foo</code>执行的话就是在<code v-pre>obj</code>环境下执行；</p>
+<p>但是如果是引用，就不会把<code v-pre>obj</code>环境一并带走了，这里的<code v-pre>fn = obj.foo</code>本质上是<code v-pre>fn = foo</code>，因为这里的<code v-pre>obj.foo</code>也是在引用<code v-pre>foo</code>（<code v-pre>foo</code>的声明定义不在<code v-pre>obj</code>内），这也就是为什么<code v-pre>fn()</code>和<code v-pre>obj.foo()</code>运行的效果不同了；</p>
+<p>同样的，无论是<code v-pre>setTimeout</code>的回调函数，还是函数传参，如果<code v-pre>obj.foo</code>没有得到立即执行而是被引用的话，结果就是引用到了普通的<code v-pre>foo</code>，后续调用的时候，就是在全局环境下调用<code v-pre>foo</code>方法，那么<code v-pre>this</code>指向全局。</p>
+<p>因此，这里的<code v-pre>obj.foo</code>并不会 “携带” <code v-pre>obj</code>，<strong>重要知识：</strong> 只有箭头函数会捕获定义时的<code v-pre>this</code>；普通函数的<code v-pre>this</code>始终取决于调用方式</p>
+<p>如果还觉得疑惑，或许直接运行我调整后的这部分程序，并看到运行结果就明白了：</p>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">function foo() {</span>
+<span class="line">	console.log( this.a );</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">var obj = {</span>
+<span class="line">	a: 2,</span>
+<span class="line">	foo: foo</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line">var bar = obj.foo; </span>
+<span class="line">obj.foo();         // 2</span>
+<span class="line">bar();             // undefined</span>
+<span class="line"></span>
+<span class="line">var a = "oops, global"; </span>
+<span class="line">obj.foo();         // 2</span>
+<span class="line">bar();             // oops, global</span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div></details>
+<h3 id="明确绑定-explicit-binding" tabindex="-1"><a class="header-anchor" href="#明确绑定-explicit-binding"><span>明确绑定（Explicit Binding）</span></a></h3>
+<p>用我们刚看到的 <em>隐含绑定</em>，我们不得不改变目标对象使它自身包含一个对函数的引用，而后使用这个函数引用属性来间接地（隐含地）将 <code v-pre>this</code> 绑定到这个对象上。</p>
+<p>但是，如果你想强制一个函数调用使用某个特定对象作为 <code v-pre>this</code> 绑定，而不在这个对象上放置一个函数引用属性呢？</p>
+<p>JavaScript 语言中的“所有”函数都有一些工具（通过他们的 <code v-pre>[[Prototype]]</code> —— 待会儿详述）可以用于这个任务。具体地说，函数拥有 <code v-pre>call(..)</code> 和 <code v-pre>apply(..)</code> 方法。</p>
+<p>绝大多数被提供的函数，当然还有你将创建的所有的函数，都可以访问 <code v-pre>call(..)</code> 和 <code v-pre>apply(..)</code>。</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> <span class="token keyword">this</span><span class="token punctuation">.</span>a <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> obj <span class="token operator">=</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token literal-property property">a</span><span class="token operator">:</span> <span class="token number">2</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">foo</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span> obj <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 2</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>通过 <code v-pre>foo.call(..)</code> 使用 <em>明确绑定</em> 来调用 <code v-pre>foo</code>，允许我们强制函数的 <code v-pre>this</code> 指向 <code v-pre>obj</code>。</p>
+<p>如果你传递一个简单基本类型值（<code v-pre>string</code>，<code v-pre>boolean</code>，或 <code v-pre>number</code> 类型）作为 <code v-pre>this</code> 绑定，那么这个基本类型值会被包装在它的对象类型中（分别是 <code v-pre>new String(..)</code>，<code v-pre>new Boolean(..)</code>，或 <code v-pre>new Number(..)</code>）。这通常称为“封箱（boxing）”。</p>
+<p><strong>注意：</strong> 就 <code v-pre>this</code> 绑定的角度讲，<code v-pre>call(..)</code> 和 <code v-pre>apply(..)</code> 是完全一样的。它们确实在处理其他参数上的方式不同，但那不是我们当前关心的。</p>
+<p>不幸的是，单独依靠 <em>明确绑定</em> 仍然不能为我们先前提到的问题提供解决方案，也就是函数“丢失”自己原本的 <code v-pre>this</code> 绑定，或者被第三方框架覆盖，等等问题。</p>
+<h4 id="硬绑定-hard-binding" tabindex="-1"><a class="header-anchor" href="#硬绑定-hard-binding"><span>硬绑定（Hard Binding）</span></a></h4>
+<p>但是有一个 <em>明确绑定</em> 的变种确实可以实现这个技巧。考虑这段代码：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> <span class="token keyword">this</span><span class="token punctuation">.</span>a <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> obj <span class="token operator">=</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token literal-property property">a</span><span class="token operator">:</span> <span class="token number">2</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> <span class="token function-variable function">bar</span> <span class="token operator">=</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token function">foo</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span> obj <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token function">bar</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 2</span></span>
+<span class="line"><span class="token function">setTimeout</span><span class="token punctuation">(</span> bar<span class="token punctuation">,</span> <span class="token number">100</span> <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 2</span></span>
+<span class="line"></span>
+<span class="line"><span class="token comment">// `bar` 将 `foo` 的 `this` 硬绑定到 `obj`</span></span>
+<span class="line"><span class="token comment">// 所以它不可以被覆盖</span></span>
+<span class="line"><span class="token function">bar</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span> window <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 2</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>我们来看看这个变种是如何工作的。我们创建了一个函数 <code v-pre>bar()</code>，在它的内部手动调用 <code v-pre>foo.call(obj)</code>，由此强制 <code v-pre>this</code> 绑定到 <code v-pre>obj</code> 并调用 <code v-pre>foo</code>。无论你过后怎样调用函数 <code v-pre>bar</code>，它总是手动使用 <code v-pre>obj</code> 调用 <code v-pre>foo</code>。这种绑定即明确又坚定，所以我们称之为 <em>硬绑定（hard binding）</em></p>
+<p>用 <em>硬绑定</em> 将一个函数包装起来的最典型的方法，是为所有传入的参数和传出的返回值创建一个通道：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token parameter">something</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> <span class="token keyword">this</span><span class="token punctuation">.</span>a<span class="token punctuation">,</span> something <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">	<span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span>a <span class="token operator">+</span> something<span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> obj <span class="token operator">=</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token literal-property property">a</span><span class="token operator">:</span> <span class="token number">2</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> <span class="token function-variable function">bar</span> <span class="token operator">=</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token keyword">return</span> <span class="token function">foo</span><span class="token punctuation">.</span><span class="token function">apply</span><span class="token punctuation">(</span> obj<span class="token punctuation">,</span> arguments <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> b <span class="token operator">=</span> <span class="token function">bar</span><span class="token punctuation">(</span> <span class="token number">3</span> <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 2 3</span></span>
+<span class="line">console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> b <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 5</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>另一种表达这种模式的方法是创建一个可复用的帮助函数：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token parameter">something</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> <span class="token keyword">this</span><span class="token punctuation">.</span>a<span class="token punctuation">,</span> something <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">	<span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span>a <span class="token operator">+</span> something<span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token comment">// 简单的 `bind` 帮助函数</span></span>
+<span class="line"><span class="token keyword">function</span> <span class="token function">bind</span><span class="token punctuation">(</span><span class="token parameter">fn<span class="token punctuation">,</span> obj</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token keyword">return</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">		<span class="token keyword">return</span> <span class="token function">fn</span><span class="token punctuation">.</span><span class="token function">apply</span><span class="token punctuation">(</span> obj<span class="token punctuation">,</span> arguments <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">	<span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> obj <span class="token operator">=</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token literal-property property">a</span><span class="token operator">:</span> <span class="token number">2</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> bar <span class="token operator">=</span> <span class="token function">bind</span><span class="token punctuation">(</span> foo<span class="token punctuation">,</span> obj <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> b <span class="token operator">=</span> <span class="token function">bar</span><span class="token punctuation">(</span> <span class="token number">3</span> <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 2 3</span></span>
+<span class="line">console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> b <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 5</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>由于 <em>硬绑定</em> 是一个如此常用的模式，它已作为 ES5 的内建工具提供：<code v-pre>Function.prototype.bind</code>，像这样使用：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token parameter">something</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> <span class="token keyword">this</span><span class="token punctuation">.</span>a<span class="token punctuation">,</span> something <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">	<span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span>a <span class="token operator">+</span> something<span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> obj <span class="token operator">=</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token literal-property property">a</span><span class="token operator">:</span> <span class="token number">2</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> bar <span class="token operator">=</span> <span class="token function">foo</span><span class="token punctuation">.</span><span class="token function">bind</span><span class="token punctuation">(</span> obj <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> b <span class="token operator">=</span> <span class="token function">bar</span><span class="token punctuation">(</span> <span class="token number">3</span> <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 2 3</span></span>
+<span class="line">console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> b <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 5</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p><code v-pre>bind(..)</code> 返回一个硬编码的新函数，它使用你指定的 <code v-pre>this</code> 环境来调用原本的函数。</p>
+<p><strong>注意：</strong> 在 ES6 中，<code v-pre>bind(..)</code> 生成的硬绑定函数有一个名为 <code v-pre>.name</code> 的属性，它源自于原始的 <em>目标函数（target function）</em>。举例来说：<code v-pre>bar = foo.bind(..)</code> 应该会有一个 <code v-pre>bar.name</code> 属性，它的值为 <code v-pre>&quot;bound foo&quot;</code>，这个值应当会显示在调用栈轨迹的函数调用名称中。</p>
+<h4 id="api-调用的-环境" tabindex="-1"><a class="header-anchor" href="#api-调用的-环境"><span>API 调用的“环境”</span></a></h4>
+<p>确实，许多库中的函数，和许多在 JavaScript 语言以及宿主环境中的内建函数，都提供一个可选参数，通常称为“环境（context）”，这种设计作为一种替代方案来确保你的回调函数使用特定的 <code v-pre>this</code> 而不必非得使用 <code v-pre>bind(..)</code>。</p>
+<p>举例来说：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token parameter">el</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> el<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span>id <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> obj <span class="token operator">=</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token literal-property property">id</span><span class="token operator">:</span> <span class="token string">"awesome"</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token comment">// 使用 `obj` 作为 `this` 来调用 `foo(..)`</span></span>
+<span class="line"><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span> foo<span class="token punctuation">,</span> obj <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 1 awesome  2 awesome  3 awesome</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>从内部来说，几乎可以确定这种类型的函数是通过 <code v-pre>call(..)</code> 或 <code v-pre>apply(..)</code> 来使用 <em>明确绑定</em> 以节省你的麻烦。</p>
+<h3 id="new-绑定-new-binding" tabindex="-1"><a class="header-anchor" href="#new-绑定-new-binding"><span><code v-pre>new</code> 绑定（<code v-pre>new</code> Binding）</span></a></h3>
+<p>第四种也是最后一种 <code v-pre>this</code> 绑定规则，要求我们重新思考 JavaScript 中关于函数和对象的常见误解。</p>
+<p>JavaScript 拥有 <code v-pre>new</code> 操作符，而且使用它的代码模式看起来和我们在面向类语言中看到的基本一样；大多数开发者猜测 JavaScript 机制在做某种相似的事情。但是，实际上 JavaScript 的机制和 <code v-pre>new</code> 在 JS 中的用法所暗示的面向类的功能 <em>没有任何联系</em>。</p>
+<p>首先，让我们重新定义 JavaScript 的“构造器”是什么。在 JS 中，构造器 <strong>仅仅是一个函数</strong>，它们偶然地与前置的 <code v-pre>new</code> 操作符一起调用。它们不依附于类，它们也不初始化一个类。它们甚至不是一种特殊的函数类型。它们本质上只是一般的函数，在被使用 <code v-pre>new</code> 来调用时改变了行为。</p>
+<p>当在函数前面被加入 <code v-pre>new</code> 调用时，也就是构造器调用时，下面这些事情会自动完成：</p>
+<ol>
+<li>一个全新的对象会凭空创建（就是被构建）</li>
+<li><em>这个新构建的对象会被接入原形链（<code v-pre>[[Prototype]]</code>-linked）</em></li>
+<li>这个新构建的对象被设置为函数调用的 <code v-pre>this</code> 绑定</li>
+<li>除非函数返回一个它自己的其他 <strong>对象</strong>，否则这个被 <code v-pre>new</code> 调用的函数将 <em>自动</em> 返回这个新构建的对象。</li>
+</ol>
+<p>步骤 1，3 和 4 是我们当下要讨论的。我们现在跳过第 2 步，在第五章回过头来讨论。</p>
+<p>考虑这段代码：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token parameter">a</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	<span class="token keyword">this</span><span class="token punctuation">.</span>a <span class="token operator">=</span> a<span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">var</span> bar <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">foo</span><span class="token punctuation">(</span> <span class="token number">2</span> <span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span> bar<span class="token punctuation">.</span>a <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 2</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>通过在前面使用 <code v-pre>new</code> 来调用 <code v-pre>foo(..)</code>，我们构建了一个新的对象并把这个新对象作为 <code v-pre>foo(..)</code> 调用的 <code v-pre>this</code>。 <strong><code v-pre>new</code> 是函数调用可以绑定 <code v-pre>this</code> 的最后一种方式</strong>，我们称之为 <em>new 绑定（new binding）</em>。</p>
+<details class="hint-container details"><summary>总结</summary>
+<p>非常全面的介绍，多方面介绍了<code v-pre>this</code>的特点以及如果修改、使用；</p>
+<p>简要来说，默认绑定和隐含绑定讲的仍然是谁调用则指向谁的规则，隐含绑定提到了引用的内容；</p>
+<p>明确绑定则是讲解使用<code v-pre>call</code>和<code v-pre>apply</code>方法，实现绑定<code v-pre>this</code>，也就是把方法绑定给对象，这样就能实现对象调用方法，<code v-pre>this</code>指向对象；延伸到硬绑定，也就是在函数内使用<code v-pre>call</code>或<code v-pre>apply</code>方法，进一步延伸封装扩展到<code v-pre>bind</code>，也就是可以自由输入参数来实现把各种方法绑定到各个对象之上的方法；当然总体核心都是<code v-pre>call</code>或<code v-pre>apply</code>方法</p>
+<p>最后是new绑定，时间关系后面再说了</p>
+</details>
+</div></template>
+
+
