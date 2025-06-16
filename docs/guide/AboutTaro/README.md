@@ -147,3 +147,117 @@ const hotStore = observable({
 
 
 ```
+
+
+
+
+
+
+
+遇到一个之前让我放弃的问题，没想到开发了这么久又突然冒了出来，这次我找到了解决方案：
+
+问题：
+报警告：
+```
+WXMLRT_$gwx:./base.wxml:template:213:16: Template `tmpl_0_13` not found.
+[WXML Runtime warning] ./base.wxml
+ Template `tmpl_0_13` not found.
+  375 | 
+  376 | <template name="tmpl_5_container">
+> 377 |   <template is="{{xs.a(5, i.nn, l)}}" data="{{i:i,cid:5,l:xs.f(l,i.nn)}}" />
+      |                ^
+  378 | </template>
+  379 | 
+  380 | <template name="tmpl_6_0">
+```
+并且出现页面AtModal打开确认、取消按钮不显示的问题；
+
+解决方案与流程：
+找到`github`上`taro`的`issues`中有人提到`Taro3.6.25 开启 Prebundle 微信小程序会报 Template tmpl_0_13 not found 警告 #15493`
+
+可以通过搜索引擎搜索`Template 'tmpl_0_13' not found`找到；
+
+解决方案：
+打开`config/index.js`,将
+```
+compiler: 'webpack5',
+```
+修改为：
+```
+compiler: {
+    type: 'webpack5',
+    prebundle: {
+      enable: false,
+      include: ['@taro/components'],
+    },
+  },
+```
+重新编译运行代码，重新打开微信开发者工具，代码恢复正常
+
+问题的核心原因与Webpack5 预构建机制有关：
+
+Webpack5 预构建的影响：
+
+当配置compiler: 'webpack5'时，Taro 默认启用了prebundle（预构建）功能
+
+预构建会提前打包某些模块（如@taro/components），但可能导致以下问题：
+
+模块加载顺序混乱：预构建模块与业务模块的加载时序不匹配
+
+模板引用丢失：动态模板引用在预构建过程中被错误处理
+
+组件样式隔离：预构建可能导致组件样式作用域失效
+
+模板未找到的具体原因：
+
+预构建过程中，Taro 可能未能正确解析base.wxml中动态引用的模板
+
+表达式`{{xs.a(5, i.nn, l)}}`生成的模板名称在预构建时被错误处理，导致运行时无法匹配
+
+组件显示异常的原因：
+
+AtModal按钮不显示通常是因为：
+
+组件样式被预构建过程隔离，未正确注入到页面
+
+动态组件渲染逻辑在预构建环境中执行异常
+
+三、解决方案原理说明
+
+将配置修改为以下形式解决了问题：
+
+```js
+compiler: {
+  type: 'webpack5',
+  prebundle: {
+    enable: false,
+    include: ['@taro/components'],
+  },
+}
+```
+这个方案的核心是禁用 Webpack5 的预构建功能，其解决问题的逻辑如下：
+
+关闭预构建的直接效果：
+
+模块加载顺序恢复正常：所有模块按运行时需求动态加载，避免时序错误
+
+模板解析回归动态模式：Taro 在运行时按需解析模板引用，确保tmpl_0_13被正确查找
+
+组件样式作用域修复：关闭预构建后，组件样式能正确注入到页面作用域
+
+配置参数的具体作用：
+
+type: 'webpack5'：保持使用 Webpack5 编译器，确保新特性支持
+
+prebundle.enable: false：禁用预构建功能，这是解决问题的关键
+
+prebundle.include：虽然启用了 include，但由于 enable 设为 false，该配置实际不生效
+
+更深层的技术原理：
+
+预构建本质是为了优化性能，但在复杂项目中可能破坏动态依赖关系
+
+Taro 的模板系统依赖运行时动态解析，预构建的静态分析无法处理所有动态引用场景
+
+关闭预构建后，Webpack 回归到传统的按需打包模式，确保模块和模板的动态加载能力
+
