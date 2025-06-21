@@ -144,12 +144,7 @@ const hotStore = observable({
         })
     }
 })
-
-
 ```
-
-
-
 
 
 
@@ -260,4 +255,26 @@ prebundle.include：虽然启用了 include，但由于 enable 设为 false，�
 Taro 的模板系统依赖运行时动态解析，预构建的静态分析无法处理所有动态引用场景
 
 关闭预构建后，Webpack 回归到传统的按需打包模式，确保模块和模板的动态加载能力
+
+
+
+
+
+**没来得及记录的问题和内容**
+因为太过忙碌,总是来不及记录学习内容,在这下面先列举吧:
+
+react中useEffect回调函数使用async导致的崩溃问题、以及排查的方法与过程
+
+数据库实现浏览历史的数组操作问题、去重、
+
+利用token在redis里拿到userid、
+
+查询用户使用的userid是ObjectId类型，先转换才能查，转换方式：const userid = mongoose.Types.ObjectId(data.userid);
+
+微信小程序使用用户微信头像、昵称的事件需绑定在原生组件上（button、input）
+
+微信小程序setState的渲染，并且setState的同个词法作用域闭包下捕获的是其渲染前的值，异步渲染后不更新，因此永远不要立刻使用刚setState设置完的值，要使用的话使用其数据源，而不是state
+
+
+
 
