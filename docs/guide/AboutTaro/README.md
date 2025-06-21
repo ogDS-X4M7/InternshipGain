@@ -275,6 +275,14 @@ react中useEffect回调函数使用async导致的崩溃问题、以及排查的�
 
 微信小程序setState的渲染，并且setState的同个词法作用域闭包下捕获的是其渲染前的值，异步渲染后不更新，因此永远不要立刻使用刚setState设置完的值，要使用的话使用其数据源，而不是state
 
+报错
+```
+[MobX] Since strict-mode is enabled, changing (observed) observable values without using an action is not allowed. Tried to modify: ObservableObject@4.likeSignal
+```
+原因是仓库中修改this.likeSignal没有在action中修改，解决方法：
+将所有修改状态的语句都用runInAction(()=>{xxx})包起来即可
+
+
 
 
 
