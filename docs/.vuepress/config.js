@@ -20,7 +20,8 @@ export default defineUserConfig({
           { text: '第一段实习', link: '/guide/theFirstInternship/' },
           { text: '未来的第二段实习', link: '/guide/theSecondInternship/' },
           { text: 'vuepress的简单使用', link: '/guide/useVuepress/' },
-          { text: '你不知道的JS摘录', link: '/guide/youDontKnowJS/'}
+          { text: '你不知道的JS摘录', link: '/guide/youDontKnowJS/' },
+          { text: 'React + Taro 小程序开发简单学习', link: '/guide/AboutTaro/' },
         ],
       },
       { text: '关于作者', link: 'https://github.com/ogDS-X4M7' },
@@ -33,7 +34,7 @@ export default defineUserConfig({
           collapsible: true,
           // 基于项目路径的 .md 或 .html 后缀是可以省略的。前缀可以是相对路径，等同于 `prefix: /reference/bundler/`
           prefix: 'theFirstInternship/',
-          children: ['index', 'gain1', 'gain2', 'gain3', 'gain4', 'gain5', 'gain6','gain7'],
+          children: ['index', 'gain1', 'gain2', 'gain3', 'gain4', 'gain5', 'gain6', 'gain7'],
         },
         {
           text: '第二段实习',
@@ -52,7 +53,13 @@ export default defineUserConfig({
           collapsible: true,
           prefix: 'youDontKnowJS/',
           children: ['index', 'excerpt1', 'excerpt2'],
-        }
+        },
+        {
+          text: 'React + Taro 小程序开发简单学习',
+          collapsible: true,
+          prefix: 'AboutTaro/',
+          children: ['index', 'taro_one', 'taro_two', 'taro_three', 'taro_four', 'taro_five'],
+        },
       ],
     },
   }),

@@ -1,4 +1,4 @@
-# Taro 小程序+React学习
+# Taro小程序+React——基础知识与正常运行须知
 
 这部分学习内容结合相应代码查看，目的是复习和记下使用方法，只供个人查看
 
@@ -8,7 +8,7 @@
 
 样式也很简单，基本没变，在组件、页面同目录下创建文件，然后`import './xxx.scss'`引入即可
 
-**重点讲一下状态管理**
+## 状态管理（重点）
 
 状态管理仓库使用`mobx`，`store`文件夹下创建想要的仓库`js`文件，引入`mobx`：
 ```
@@ -76,30 +76,80 @@ const Index = ({ counterStore,hotStore })=> {
 export default inject('counterStore','hotStore')(observer(Index))
 ```
 
-**再重点讲一下发送请求**
+## 发送请求（重点）
 
-发送请求`Taro`有自己的`Taro.request`，引入一下就能用：这里是简单的二次封装，创建`service`文件夹，下创`httpService.js`:注意`return`
+发送请求`Taro`有自己的`Taro.request`，引入一下就能用：
+
+这里是二次封装，设置网络请求拦截器，添加了请求时的顶部栏加载动画与请求后的关闭，添加了请求附带token的设置；
+
+创建`service`文件夹，下创`httpService.js`:注意`return`
 ```
 import Taro from "@tarojs/taro"
+import { request as TaroRequest } from '@tarojs/taro';
+
+// 网络请求拦截器
+const interceptor = function (chain) {
+    const requestParams = chain.requestParams
+    const { method, data, url } = requestParams
+
+    // console.log(`http ${method || 'GET'} --> ${url} data: `, data)
+
+    // 添加加载
+    Taro.showNavigationBarLoading();
+    Taro.showLoading()
+
+    // console.log(requestParams)
+    // debugger
+    // 添加token
+    const token = Taro.getStorageSync('token')
+    // console.log(token);
+    if (token) {
+        requestParams.header = { ...requestParams.header, authorization: `Bearer ${token}` }
+    } else {
+        // console.log('请先登录')
+    }
+    // console.log(requestParams)
+    // 这里还意外发现两个console.log打印结果都是添加了token后的内容，原因是没有深拷贝， 
+    // JavaScript 的 console 在打印对象时，通常会显示对象的最终状态（特别是在异步环境中）。
+    // 这是因为 console 可能会在修改对象后才渲染其内容，导致看到的两个打印结果都包含了 token。
+
+    // 顺便使用了debugger，在debugger的帮助下，第一个console.log会打印出添加token前的requestParams
+
+    return chain.proceed(requestParams)
+        .then(res => {
+            // console.log(`http <-- ${url} result:`, res)
+            // 关闭加载
+            Taro.hideNavigationBarLoading()
+            Taro.hideLoading();
+            return res
+        })
+}
+Taro.addInterceptor(interceptor)
 
 // option是obj，暂时先设置允许传入url、data、header
 export default {
-    request(option,method  ='GET'){
-        return Taro.request({
+    request(option, method = 'GET') {
+        return TaroRequest({
             ...option,
+            method, // 传递 method 参数
             header: {
-              'content-type': 'application/json', // 默认值
-              ...option.header
+                'content-type': 'application/json', // 默认值
+                ...option.header
             },
             success: function (res) {
-            //   console.log(res.data)
-            }
+                // console.log(res.data)
+            },
+            timeout: 5000
         })
     },
-    get(option){
-        return this.request(option,'GET');
+    get(option) {
+        return this.request(option, 'GET');
+    },
+    post(option) {
+        return this.request(option, 'POST')
     }
 }
+
 ```
 
 同一目录下创建`index.js`，封装`api`——对应的方法：注意`return`
@@ -121,6 +171,7 @@ const service = {
 
 export default service;
 ```
+## 注意事项：域名备案
 **注意：小程序要求所有网络请求的域名必须先在微信公众平台完成备案，否则会被拦截。**
 
 报错如下：
@@ -131,23 +182,43 @@ https://xxx 不在以下 request 合法域名列表中，请参考文档：https
 
 最后就可以正常使用了，进入要使用的仓库，引入、调用方法即可：注意处理返回回来的`promise`
 ```
-import { observable } from "mobx";
+import { observable, runInAction } from "mobx";
 import service from "../service";
 const hotStore = observable({
-    hots:[],
-    getHots(){
-        const result = service.getHotList();
-        console.log(result);
-        result.then(res=>{
-          console.log(res);
-          this.hots.push(...res.data.data)
-        })
+  hots: [],
+  async getHots() {
+    try {
+      const result = await service.getHotList();
+      // console.log(result);
+      // console.log(result.data);
+      // this.hots.push(...result.data.data);
+      if (result.data.code === 200) {
+        runInAction(() => {
+          // 在 runInAction 中修改状态
+          this.hots = result.data.data.map(item => ({
+            ...item,
+            // 如果原数据没有 id，添加唯一标识
+            id: item.id || `hot-${Date.now()}-${Math.random().toString(36).slice(2)}`
+          }));
+        });
+        return true;
+      }
+      return result.data.msg; // 因为其他原因没能获取数据，则返回原因
+      // async、await本质就是promise的语法糖，我在这里return true，但后续调用这个函数的地方收到的返回值仍然是一个promise：resolved状态，值为 true。
+      // 因为async、await内部会自动帮忙转化成promise，当然源头必须本身是promise才能处理，就像这里的await service.getHotList()，
+      // 找到源头是返回了一个request请求，返回的本身就是promise，经过这里的语法糖，继续返回的值就和promise直接的.then是一样的，返回的一直都是promise。
+    } catch (err) {
+      return err;
     }
+  }
 })
+
+
+export default hotStore;
 ```
 
 
-
+## Webpack5 预构建机制导致的问题
 
 遇到一个之前让我放弃的问题，没想到开发了这么久又突然冒了出来，这次我找到了解决方案：
 
@@ -255,34 +326,3 @@ prebundle.include：虽然启用了 include，但由于 enable 设为 false，�
 Taro 的模板系统依赖运行时动态解析，预构建的静态分析无法处理所有动态引用场景
 
 关闭预构建后，Webpack 回归到传统的按需打包模式，确保模块和模板的动态加载能力
-
-
-
-
-
-**没来得及记录的问题和内容**
-因为太过忙碌,总是来不及记录学习内容,在这下面先列举吧:
-
-react中useEffect回调函数使用async导致的崩溃问题、以及排查的方法与过程
-
-数据库实现浏览历史的数组操作问题、去重、
-
-利用token在redis里拿到userid、
-
-查询用户使用的userid是ObjectId类型，先转换才能查，转换方式：const userid = mongoose.Types.ObjectId(data.userid);
-
-微信小程序使用用户微信头像、昵称的事件需绑定在原生组件上（button、input）
-
-微信小程序setState的渲染，并且setState的同个词法作用域闭包下捕获的是其渲染前的值，异步渲染后不更新，因此永远不要立刻使用刚setState设置完的值，要使用的话使用其数据源，而不是state
-
-报错
-```
-[MobX] Since strict-mode is enabled, changing (observed) observable values without using an action is not allowed. Tried to modify: ObservableObject@4.likeSignal
-```
-原因是仓库中修改this.likeSignal没有在action中修改，解决方法：
-将所有修改状态的语句都用runInAction(()=>{xxx})包起来即可
-
-
-
-
-
