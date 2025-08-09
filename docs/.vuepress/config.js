@@ -18,7 +18,7 @@ export default defineUserConfig({
         text: '实习收获',
         children: [
           { text: '第一段实习', link: '/guide/theFirstInternship/' },
-          { text: '未来的第二段实习', link: '/guide/theSecondInternship/' },
+          { text: '第二段实习', link: '/guide/theSecondInternship/' },
           { text: 'vuepress的简单使用', link: '/guide/useVuepress/' },
           { text: '你不知道的JS摘录', link: '/guide/youDontKnowJS/' },
           { text: 'React + Taro 小程序开发简单学习', link: '/guide/AboutTaro/' },
