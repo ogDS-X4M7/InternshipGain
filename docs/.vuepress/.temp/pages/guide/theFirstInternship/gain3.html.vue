@@ -45,7 +45,7 @@
 <span class="line">&lt;/a></span>
 <span class="line"></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>随后遇到第二个问题，文字盒子总是处于靠下的位置，继续用浏览器的<code v-pre>选择元素工具</code>观察页面，发现盒子莫名其妙下移，并且不是由于边框、外间距、内间距，而是莫名其妙的自动下移了，这导致文字没有正常居中。考虑到前面是图片，可能是基线对准的问题，于是我给图片添加了<code v-pre>vertical-align: top;</code>，问题解决。</p>
-<p>最后是第三个问题，我注意到项目中这个<code v-pre>span</code>盒子是复用的，样式调节会影响到其他部分的使用，因此再增加逻辑判断，对<code v-pre>style</code>做三目表达式判断来修改样式既可。、</p>
+<p>最后是第三个问题，我注意到项目中这个<code v-pre>span</code>盒子是复用的，样式调节会影响到其他部分的使用，因此再增加逻辑判断，对<code v-pre>style</code>做三目表达式判断来修改样式既可。</p>
 <p>这是最终修改完毕的代码：
 为<code v-pre>a</code>标签添加<code v-pre>style=&quot;display: block;height: 100%&quot;</code>；</p>
 <p>为<code v-pre>img</code>添加<code v-pre>style=&quot;display: block;height: 100%&quot;</code>；</p>

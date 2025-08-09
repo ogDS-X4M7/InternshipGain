@@ -66,10 +66,12 @@
 <span class="line"></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>结构上来说看起来还是比较简单的，但是注意到第二层的view上是被放置了一个onclick事件，它对应了一个打开模态框的方法，这个模态框就是用户授权登录的模态框，当用户授权登录后，这个onclick事件显然应该被移除,使用dom去移除事件监听的时候出现了第一个问题。</p>
 <h3 id="dom移除onclick事件监听无效" tabindex="-1"><a class="header-anchor" href="#dom移除onclick事件监听无效"><span>dom移除onclick事件监听无效</span></a></h3>
+<p><a href="#dom%E7%9B%91%E5%90%AC%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88">这两个dom相关问题最后有简单的解决方案，点击查看</a></p>
 <p>如果我使用移除click，那么点击事件并不会被移除，还继续存在，对后续造成干扰，这显然不是我想要的，但我并没有想明白原因，我打印实例对象，注意到：实例对象身上并没有click的监听，而是有tap的监听，于是我选择尝试修改为移除tap，尽管控制台在这个情况下，非常幽默地给出没有tap的监听，因此不会移除的警告；但最后的效果是，监听被移除了，登陆成功后，点击不会再弹窗</p>
 <p>当然，我也尝试过改为ontap，这样让移除tap显得理所当然，结果就是改为ontap，并不能像onclick一样被点击激活，ontap是经过taro编译后的结果，但采用dom移除监听的方法taro并不能编译成tap，因此只能自己提前写成移除tap，尽管会被警告，但它是唯一有效的解决方案。</p>
 <p>移除监听的事件结束了，但是很快又遇到了第二个问题。</p>
 <h3 id="点击触发的组件在移除onclick的view中全部失效——冒泡与捕获" tabindex="-1"><a class="header-anchor" href="#点击触发的组件在移除onclick的view中全部失效——冒泡与捕获"><span>点击触发的组件在移除onclick的view中全部失效——冒泡与捕获</span></a></h3>
+<p><a href="#dom%E7%9B%91%E5%90%AC%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88">这两个dom相关问题最后有简单的解决方案，点击查看</a></p>
 <p>把具有点击触发的组件放到之前有过onclick的view里似乎都会失效，因此我把按钮拿出来，果然可以使用了，但我尝试点击<code v-pre>&lt;Text className='userName' onClick={updateInfo}&gt;微信用户&lt;/Text&gt;</code>，虽然没有反应，但点完<code v-pre>&lt;Text className='userName' onClick={updateInfo}&gt;微信用户&lt;/Text&gt;</code>，再去点击放在外面能够正常使用的<code v-pre>&lt;AtButton onClick={updateInfo}&gt;修改/更新信息&lt;/AtButton&gt;</code>，我发现：控制台先打印了10个“尝试使用抽屉”，再换行打印一个“尝试使用抽屉”；</p>
 <p>这意味着我点击<code v-pre>&lt;Text className='userName' onClick={updateInfo}&gt;</code>是有反应的，只是似乎被什么东西阻塞住无法进行下去，当我点击能够正常使用的<code v-pre>&lt;AtButton onClick={updateInfo}&gt;修改/更新信息&lt;/AtButton&gt;</code>时它们就被释放出来了。</p>
 <p>当然，这个问题最后被解决了，关键在于两个修改：</p>
@@ -420,6 +422,39 @@
 <h3 id="token获取用户信息注意事项" tabindex="-1"><a class="header-anchor" href="#token获取用户信息注意事项"><span>token获取用户信息注意事项</span></a></h3>
 <p>token获取用户信息的使用是相当广泛的，最常使用的就是通过token获取userid，再根据userid去做需要的请求和操作，比如更新浏览历史记录、点赞、收藏，都是根据用户发送请求时提交的token在redis里匹配用户的userid。再根据userid查到数据库中匹配的信息去增、删、改。</p>
 <p>其中，因为查询用户使用的userid是ObjectId类型，而从redis里根据token获取的是字符串类型，所以还需要先转换才能查，转换方式：const userid = mongoose.Types.ObjectId(data.userid);</p>
+<h2 id="dom监听解决方案" tabindex="-1"><a class="header-anchor" href="#dom监听解决方案"><span>dom监听解决方案</span></a></h2>
+<p>原本的事件监听从ref放到下一层的卡片上，让事件监听随组件标签销毁进行同步销毁，无需手动对dom操作移除，避免了一系列bug</p>
+<div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line"> &lt;View ref={loginRef}></span>
+<span class="line">{</span>
+<span class="line">    needAuth</span>
+<span class="line">        ? &lt;View className='userInfo ' onClick={OpenModal}></span>
+<span class="line">            ......</span>
+<span class="line">            &lt;/View></span>
+<span class="line">        : &lt;View></span>
+<span class="line">            ......</span>
+<span class="line">            &lt;/View></span>
+<span class="line">}</span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h3 id="原理与原因分析" tabindex="-1"><a class="header-anchor" href="#原理与原因分析"><span>原理与原因分析：</span></a></h3>
+<p>在小程序开发中，尽量避免直接操作 DOM，这是由小程序的运行机制和框架设计决定的，主要原因如下：</p>
+<ol>
+<li>小程序的 “双线程” 架构限制直接 DOM 操作</li>
+</ol>
+<p>小程序采用 渲染层（WebView） 和 逻辑层（JSCore） 分离的双线程架构：</p>
+<p>逻辑层负责业务逻辑（如数据处理、事件响应），无法直接访问渲染层的 DOM/BOM。</p>
+<p>渲染层负责页面渲染，两者通过 数据通信 同步状态（类似 React/Vue 的数据驱动思想）。</p>
+<p>直接操作 DOM 的代码（如 document.getElementById、window.scrollTo 等）在逻辑层中会失效，且可能导致线程通信混乱，引发渲染异常。</p>
+<ol start="2">
+<li>框架设计鼓励 “数据驱动” 而非 “DOM 操作”</li>
+</ol>
+<p>主流小程序框架（微信小程序原生框架、Taro、UniApp 等）均采用 数据驱动视图 的模式：</p>
+<p>开发者通过修改 data 中的数据，框架自动更新对应的视图（类似 React 的 setState 或 Vue 的 v-model）。</p>
+<p>直接操作 DOM 会绕过框架的状态管理，导致 数据与视图不一致，增加调试难度（例如手动修改 DOM 后，数据未同步，下次更新会覆盖手动修改的结果）。</p>
+<ol start="3">
+<li>性能与兼容性问题</li>
+</ol>
+<p>性能损耗：小程序对 DOM 操作的支持有限，频繁手动操作 DOM 可能导致渲染层与逻辑层通信频繁，引发页面卡顿。</p>
+<p>跨端兼容性：如果使用 Taro 等跨端框架，直接 DOM 操作可能在不同平台（微信、支付宝、H5 等）表现不一致，违背 “一套代码多端运行” 的初衷。</p>
 </div></template>
 
 

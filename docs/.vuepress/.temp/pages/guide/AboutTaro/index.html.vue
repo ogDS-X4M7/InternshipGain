@@ -209,7 +209,7 @@
 <span class="line">  379 | </span>
 <span class="line">  380 | &lt;template name="tmpl_6_0"></span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>并且出现页面AtModal打开确认、取消按钮不显示的问题；</p>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>并且出现页面<code v-pre>AtModal</code>打开确认、取消按钮不显示的问题；</p>
 <p>解决方案与流程：
 找到<code v-pre>github</code>上<code v-pre>taro</code>的<code v-pre>issues</code>中有人提到<code v-pre>Taro3.6.25 开启 Prebundle 微信小程序会报 Template tmpl_0_13 not found 警告 #15493</code></p>
 <p>可以通过搜索引擎搜索<code v-pre>Template 'tmpl_0_13' not found</code>找到；</p>
@@ -227,18 +227,18 @@
 <span class="line">  },</span>
 <span class="line"></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>重新编译运行代码，重新打开微信开发者工具，代码恢复正常</p>
-<p>问题的核心原因与Webpack5 预构建机制有关：</p>
-<p>Webpack5 预构建的影响：</p>
-<p>当配置compiler: 'webpack5'时，Taro 默认启用了prebundle（预构建）功能</p>
-<p>预构建会提前打包某些模块（如@taro/components），但可能导致以下问题：</p>
+<p>问题的核心原因与<code v-pre>Webpack5</code>预构建机制有关：</p>
+<p><code v-pre>Webpack5</code>预构建的影响：</p>
+<p>当配置<code v-pre>compiler: 'webpack5'</code>时，<code v-pre>Taro</code>默认启用了<code v-pre>prebundle（预构建）</code>功能</p>
+<p>预构建会提前打包某些模块（如<code v-pre>@taro/components</code>），但可能导致以下问题：</p>
 <p>模块加载顺序混乱：预构建模块与业务模块的加载时序不匹配</p>
 <p>模板引用丢失：动态模板引用在预构建过程中被错误处理</p>
 <p>组件样式隔离：预构建可能导致组件样式作用域失效</p>
 <p>模板未找到的具体原因：</p>
-<p>预构建过程中，Taro 可能未能正确解析base.wxml中动态引用的模板</p>
+<p>预构建过程中，<code v-pre>Taro</code>可能未能正确解析<code v-pre>base.wxml</code>中动态引用的模板</p>
 <p>表达式<code v-pre>{{xs.a(5, i.nn, l)}}</code>生成的模板名称在预构建时被错误处理，导致运行时无法匹配</p>
 <p>组件显示异常的原因：</p>
-<p>AtModal按钮不显示通常是因为：</p>
+<p><code v-pre>AtModal</code>按钮不显示通常是因为：</p>
 <p>组件样式被预构建过程隔离，未正确注入到页面</p>
 <p>动态组件渲染逻辑在预构建环境中执行异常</p>
 <p>三、解决方案原理说明</p>
@@ -251,19 +251,19 @@
 <span class="line">  <span class="token punctuation">}</span><span class="token punctuation">,</span></span>
 <span class="line"><span class="token punctuation">}</span></span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>这个方案的核心是禁用 Webpack5 的预构建功能，其解决问题的逻辑如下：</p>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>这个方案的核心是禁用<code v-pre>Webpack5</code>的预构建功能，其解决问题的逻辑如下：</p>
 <p>关闭预构建的直接效果：</p>
 <p>模块加载顺序恢复正常：所有模块按运行时需求动态加载，避免时序错误</p>
-<p>模板解析回归动态模式：Taro 在运行时按需解析模板引用，确保tmpl_0_13被正确查找</p>
+<p>模板解析回归动态模式：<code v-pre>Taro</code>在运行时按需解析模板引用，确保<code v-pre>tmpl_0_13</code>被正确查找</p>
 <p>组件样式作用域修复：关闭预构建后，组件样式能正确注入到页面作用域</p>
 <p>配置参数的具体作用：</p>
-<p>type: 'webpack5'：保持使用 Webpack5 编译器，确保新特性支持</p>
-<p>prebundle.enable: false：禁用预构建功能，这是解决问题的关键</p>
-<p>prebundle.include：虽然启用了 include，但由于 enable 设为 false，该配置实际不生效</p>
+<p><code v-pre>type: 'webpack5'</code>：保持使用<code v-pre>Webpack5</code>编译器，确保新特性支持</p>
+<p><code v-pre>prebundle.enable</code>: <code v-pre>false</code>：禁用预构建功能，这是解决问题的关键</p>
+<p><code v-pre>prebundle.include</code>：虽然启用了 <code v-pre>include</code>，但由于<code v-pre>enable</code>设为<code v-pre>false</code>，该配置实际不生效</p>
 <p>更深层的技术原理：</p>
 <p>预构建本质是为了优化性能，但在复杂项目中可能破坏动态依赖关系</p>
-<p>Taro 的模板系统依赖运行时动态解析，预构建的静态分析无法处理所有动态引用场景</p>
-<p>关闭预构建后，Webpack 回归到传统的按需打包模式，确保模块和模板的动态加载能力</p>
+<p><code v-pre>Taro</code>的模板系统依赖运行时动态解析，预构建的静态分析无法处理所有动态引用场景</p>
+<p>关闭预构建后，<code v-pre>Webpack</code>回归到传统的按需打包模式，确保模块和模板的动态加载能力</p>
 </div></template>
 
 
