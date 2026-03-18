@@ -63,11 +63,11 @@
 
 为`img`添加`style="display: block;height: 100%"`；
 
-为`span`添加`style="display:inline-block;padding: 0;height: 100%;" :style="(ProductInfo.product_spec_image_row[item.Id] && ProductInfo.product_spec_image_row.length>0)?'margin:0px s5px;font-Size:14px':''"`
+为`span`添加`style="display:inline-block;padding: 0;height: 100%;" :style="(ProductInfo.product_spec_image_row[item.Id] && ProductInfo.product_spec_image_row.length>0)?'margin:0px 5px;font-Size:14px':''"`
 ```
 <a href="javascript:void(0);" class="item goodsStyle" style="display: block;height: 100%" :title="item.Name" @click="selectItem(items.ckid, items.unit_id,item.Id,ProductInfo.spec_item_map[item.Id])">
 	<img v-if="ProductInfo.product_spec_image_row[item.Id] && ProductInfo.product_spec_image_row.length>0" class="square" style="width: 35px; height: 35px;vertical-align: top;" :alt="item.Name" :title="item.Name" :src="ProductInfo.product_spec_image_row[item.Id]" />
-	<span style="display:inline-block;padding: 0;height: 100%;" :style="(ProductInfo.product_spec_image_row[item.Id] && ProductInfo.product_spec_image_row.length>0)?'margin:0px s5px;font-Size:14px':''"> {{ item.Name }}</span>
+	<span style="display:inline-block;padding: 0;height: 100%;" :style="(ProductInfo.product_spec_image_row[item.Id] && ProductInfo.product_spec_image_row.length>0)?'margin:0px 5px;font-Size:14px':''"> {{ item.Name }}</span>
 </a>
 ```
 

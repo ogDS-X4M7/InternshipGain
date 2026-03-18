@@ -33,7 +33,7 @@
 <span class="line">    )</span>
 <span class="line">}</span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>因此<code v-pre>items.xxx</code>这多样的写法很明显根本不会有这样的属性：<code v-pre>v[items.xxx]</code>，所以对<code v-pre>formationJson</code>也要做处理：</p>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>因此<code v-pre>items.xxx</code>这样的写法很明显根本不会有这样的属性：<code v-pre>v[items.xxx]</code>，所以对<code v-pre>formationJson</code>也要做处理：</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">const formatJson = (filterVal, jsonData) => {</span>
 <span class="line">    return jsonData.map((v) =></span>
 <span class="line">      filterVal.map((j) => {</span>

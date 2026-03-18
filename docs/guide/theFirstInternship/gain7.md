@@ -39,7 +39,7 @@ const formatJson = (filterVal, jsonData) => {
     )
 }
 ```
-因此`items.xxx`这多样的写法很明显根本不会有这样的属性：`v[items.xxx]`，所以对`formationJson`也要做处理：
+因此`items.xxx`这样的写法很明显根本不会有这样的属性：`v[items.xxx]`，所以对`formationJson`也要做处理：
 ```
 const formatJson = (filterVal, jsonData) => {
     return jsonData.map((v) =>

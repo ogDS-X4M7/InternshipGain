@@ -49,10 +49,10 @@
 <p>这是最终修改完毕的代码：
 为<code v-pre>a</code>标签添加<code v-pre>style=&quot;display: block;height: 100%&quot;</code>；</p>
 <p>为<code v-pre>img</code>添加<code v-pre>style=&quot;display: block;height: 100%&quot;</code>；</p>
-<p>为<code v-pre>span</code>添加<code v-pre>style=&quot;display:inline-block;padding: 0;height: 100%;&quot; :style=&quot;(ProductInfo.product_spec_image_row[item.Id] &amp;&amp; ProductInfo.product_spec_image_row.length&gt;0)?'margin:0px s5px;font-Size:14px':''&quot;</code></p>
+<p>为<code v-pre>span</code>添加<code v-pre>style=&quot;display:inline-block;padding: 0;height: 100%;&quot; :style=&quot;(ProductInfo.product_spec_image_row[item.Id] &amp;&amp; ProductInfo.product_spec_image_row.length&gt;0)?'margin:0px 5px;font-Size:14px':''&quot;</code></p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">&lt;a href="javascript:void(0);" class="item goodsStyle" style="display: block;height: 100%" :title="item.Name" @click="selectItem(items.ckid, items.unit_id,item.Id,ProductInfo.spec_item_map[item.Id])"></span>
 <span class="line">	&lt;img v-if="ProductInfo.product_spec_image_row[item.Id] &amp;&amp; ProductInfo.product_spec_image_row.length>0" class="square" style="width: 35px; height: 35px;vertical-align: top;" :alt="item.Name" :title="item.Name" :src="ProductInfo.product_spec_image_row[item.Id]" /></span>
-<span class="line">	&lt;span style="display:inline-block;padding: 0;height: 100%;" :style="(ProductInfo.product_spec_image_row[item.Id] &amp;&amp; ProductInfo.product_spec_image_row.length>0)?'margin:0px s5px;font-Size:14px':''"> {{ item.Name }}&lt;/span></span>
+<span class="line">	&lt;span style="display:inline-block;padding: 0;height: 100%;" :style="(ProductInfo.product_spec_image_row[item.Id] &amp;&amp; ProductInfo.product_spec_image_row.length>0)?'margin:0px 5px;font-Size:14px':''"> {{ item.Name }}&lt;/span></span>
 <span class="line">&lt;/a></span>
 <span class="line"></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h2 id="另外的需求与完成" tabindex="-1"><a class="header-anchor" href="#另外的需求与完成"><span>另外的需求与完成</span></a></h2>

@@ -7,8 +7,9 @@
   "scripts": {
     "docs:build": "vuepress build docs",
     "docs:clean-dev": "vuepress dev docs --clean-cache",
-    "docs:dev": "vuepress dev docs --open",
-    "docs:update-package": "npx vp-update"
+    "docs:dev": "node scripts/dependence-watch.js && vuepress dev docs --open",
+    "docs:update-package": "npx vp-update",
+    "deps:watch": "node scripts/dependence-watch.js"
   },
   "devDependencies": {
     "@vuepress/bundler-vite": "2.0.0-rc.20",
