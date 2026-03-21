@@ -6,7 +6,7 @@
 `.vuepress/config.js`是进行总体设计，布局框架，可以理解为`SPA`(单页应用)的总体布局框架，也就是切换路由的时候内部内容会修改，但是外面的(比如顶部的边框一直都是一样的)这部分内容就是不变的框架，后面会提到的我当时对侧边栏的误解，就是因为`config.js`是对内部各个页面的侧边栏做的总体设计，当时误以为是对首页的设计了
 
 根据官网给出的新项目，以及刚刚讲的`config.js`的功能，可以看到总体框架的设计是怎么样的：
-```
+``` js
 export default defineUserConfig({
   base: '/InternshipGain/',
   lang: 'zh-CN',
@@ -35,7 +35,7 @@ export default defineUserConfig({
 简单链接填写好显示的名字和跳转链接即可：{ text: '首页', link: '/' },
 
 下拉菜单则是填好显示名称，将下拉要显示的内容放入`children`里，`children`内部的内容则与简单链接写法一致：
-```
+``` js
 navbar: [
       { text: '首页', link: '/' },
       {
@@ -51,7 +51,7 @@ navbar: [
 
 2. `sidebar`：一开始调整了很久的侧边栏都不知道为什么没看到效果，其实是误解以为这里配置的侧边栏是给首页的，但实际上`config.js`里设置的侧边栏是给各个内部的页面使用的，首页默认要简洁，因此没有侧边栏
 `sidebar`是对象存数组存对象，即
-```
+``` js
 sidebar: {
       '/guide/': [
         {
@@ -91,14 +91,14 @@ sidebar: {
 ## 不太重要的小内容
 毕竟聊到`.vuepress/config.js`了，就顺便写一下关于`favicon`图标修改的实现和项目运行自动打开页面的配置，图标修改是在`.vuepress`下创建`public`文件夹，里面存放好准备好的`favicon`图标，
 随后在`.vuepress/config.js`里的`export default defineUserConfig`中添加设置即可
-```
+``` js
 head: [
   ['link', { rel: 'icon', href: '/你的github仓库名/favicon.ico' }] 
   // 这个写法是指向public目录下的favicon.ico的意思
 ],
 ```
 项目运行自动打开需要在`package.json`中配置，加上`--open`：
-```
+``` js
 "scripts": {
   "docs:dev": "vuepress dev docs --open",
 },
