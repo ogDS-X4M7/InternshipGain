@@ -438,7 +438,7 @@ ctx.restore()
 </script>
 ```
 ::: details 代码运行演示：放大镜动图演示
-![放大镜](./images/magnifier.gif)
+![放大镜](./images/Magnifier.gif)
 :::
 #### <span style="color:green;">**重点：**</span>
 1.放大的核心手段就是<span style="color:green;">**drawImage裁切对应区域内容，展示在对应大小区域**</span>
