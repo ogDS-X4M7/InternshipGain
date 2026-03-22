@@ -1,6 +1,9 @@
 <template><div><h1 id="关于whiteboard" tabindex="-1"><a class="header-anchor" href="#关于whiteboard"><span>关于whiteBoard</span></a></h1>
-<p>whiteBoard是我的毕业设计，一个基于 WebSocket 的实时协作白板系统，支持语音通话，实时字幕转写，会议摘要功能。</p>
-<h2 id="功能特性" tabindex="-1"><a class="header-anchor" href="#功能特性"><span>功能特性</span></a></h2>
+<p>whiteBoard是我的毕业设计，一个基于 WebSocket 的实时协作白板系统，支持语音通话，实时字幕转写，会议摘要功能。在这部分文档中，我会记录项目在实现过程中学习到的技术内容，遇到的问题以及解决方案。</p>
+<p>学习技术内容知识包括实现白板绘制功能方面的Canvas，项目功能实现主要依赖的websocket；</p>
+<p>围绕项目则会结合这些canvas，websocket知识讲解在项目中如何具体应用，也会讲解如何接入讯飞星火API，实现语音转写和会议摘要功能，以及在项目开发过程中遇到的一些问题和解决方案。</p>
+<h2 id="项目介绍" tabindex="-1"><a class="header-anchor" href="#项目介绍"><span>项目介绍</span></a></h2>
+<h3 id="功能特性" tabindex="-1"><a class="header-anchor" href="#功能特性"><span>功能特性</span></a></h3>
 <ul>
 <li>实时协作白板，支持多人同时绘制</li>
 <li>支持画笔、橡皮、文本、矩形、圆形、菱形、箭头等工具</li>
@@ -18,7 +21,7 @@
 <li>鼠标工具，方便调整和选择元素</li>
 <li>会议室自动清理机制，基于最后活动时间清理无人使用的会议室</li>
 </ul>
-<h2 id="技术栈" tabindex="-1"><a class="header-anchor" href="#技术栈"><span>技术栈</span></a></h2>
+<h3 id="技术栈" tabindex="-1"><a class="header-anchor" href="#技术栈"><span>技术栈</span></a></h3>
 <ul>
 <li>前端：Vue 3</li>
 <li>后端：Node.js + Express</li>
