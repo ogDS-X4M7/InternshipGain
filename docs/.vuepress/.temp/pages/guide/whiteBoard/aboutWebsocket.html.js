@@ -1,5 +1,5 @@
 import comp from "D:/A-Front-end/A-Vuepress/InternshipGain/docs/.vuepress/.temp/pages/guide/whiteBoard/aboutWebsocket.html.vue"
-const data = JSON.parse("{\"path\":\"/guide/whiteBoard/aboutWebsocket.html\",\"title\":\"\",\"lang\":\"zh-CN\",\"frontmatter\":{},\"headers\":[],\"git\":{},\"filePathRelative\":\"guide/whiteBoard/aboutWebsocket.md\"}")
+const data = JSON.parse("{\"path\":\"/guide/whiteBoard/aboutWebsocket.html\",\"title\":\"\",\"lang\":\"zh-CN\",\"frontmatter\":{},\"headers\":[],\"git\":{\"updatedTime\":1774179024000,\"contributors\":[{\"name\":\"X4M7\",\"username\":\"X4M7\",\"email\":\"1415808154@qq.com\",\"commits\":2,\"url\":\"https://github.com/X4M7\"}],\"changelog\":[{\"hash\":\"6007980c1ee5c56e6373d812f8ccd158f835706a\",\"time\":1774179024000,\"email\":\"1415808154@qq.com\",\"author\":\"X4M7\",\"message\":\"完成canvas学习文档的编写\"},{\"hash\":\"b7bae5f25ad46d17f6915280defb9a887e317292\",\"time\":1748051530000,\"email\":\"1415808154@qq.com\",\"author\":\"X4M7\",\"message\":\"&quot;提交初步进行中的项目&quot;\"}]},\"filePathRelative\":\"guide/whiteBoard/aboutWebsocket.md\"}")
 export { comp, data }
 
 if (import.meta.webpackHot) {
