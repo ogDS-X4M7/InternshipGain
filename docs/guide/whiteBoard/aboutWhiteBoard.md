@@ -72,34 +72,28 @@
 - 生成唯一的会议室代码
 - 创建会议室
 - 加入会议室
-- 离开会议室
-- 清理无人或长时间无活动的会议室
 
 **唯一代码与创建会议室**
 
 创建一个会议室管理类，用于管理所有的会议室。每个会议室都有一个唯一的会议室代码，用于标识会议室。
 
 通过`map`来存储所有的会议室，键为会议室代码，值为会议室对象。生成唯一会议室代码时，检测`map`来确保唯一性；创建会议室的api就是调用这个方法，生成一个`code`，然后创建一个会议室对象(包含会议室代码、创建时间、最后活动时间、成员列表、画布状态、图形美化状态)，最后将会议室对象存储到`map`中，返回`code`给前端；
-``` js
+```js
 class MeetingRoomManager {
   constructor() {
     this.rooms = new Map();
   }
-  // 生成4-6位随机数字作为会议室快捷号
   generateRoomCode() {
     let code;
     do {
-      // 生成4-6位随机数字
-      const length = Math.floor(Math.random() * 3) + 4; // 4-6位
+      const length = Math.floor(Math.random() * 3) + 4;
       code = '';
       for (let i = 0; i < length; i++) {
         code += Math.floor(Math.random() * 10);
       }
-    } while (this.rooms.has(code)); // 确保唯一性
+    } while (this.rooms.has(code));
     return code;
   }
-
-  // 创建会议室
   createRoom() {
     const code = this.generateRoomCode();
     const room = {
@@ -113,20 +107,47 @@ class MeetingRoomManager {
     this.rooms.set(code, room);
     return room;
   }
-    ...
+  getRoom(code) {
+    return this.rooms.get(code);
+  }
+  joinRoom(code, socketId) {
+    let room = this.rooms.get(code);
+    if (!room || room.members.length === 0) {
+      room = {
+        code,
+        createdAt: new Date(),
+        lastActivityTime: new Date(),
+        members: [],
+        canvasState: [],
+        beautifyState: null
+      };
+      this.rooms.set(code, room);
+    }
+    const exist = room.members.find(m => m.socketId === socketId);
+    if (exist) return room;
+    room.members.push({
+      id: `user_${Date.now()}`,
+      socketId,
+      joinedAt: new Date(),
+      nickname: `用户${Math.floor(Math.random() * 1000)}`
+    });
+    return room;
+  }
+  ...
 }
+
 // 创建会议API端点
 app.post('/api/create-meeting', (req, res) => {
-    try {
-        const room = meetingRoomManager.createRoom();
-        res.json({ success: true, roomCode: room.code });
-    } catch (error) {
-        console.error('Error creating meeting:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
+  try {
+    const room = meetingRoomManager.createRoom();
+    res.json({ success: true, roomCode: room.code });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 ```
 **加入会议室**
+
 <span style="color: green;">**需要注意的是，首页部分并没有真正的加入会议室**</span>，加入会议室，开始会议是涉及到`websocket`连接的，项目设计中加入会议室是进入[会议室页面](#会议页前端实现)后才进行的连接操作，首页进行的操作其实只有校验会议室代码是否存在，决定是否进入会议室页面，仅此而已；api接口也只需要从`map`中get一下是否有请求时发送过来的会议室代码即可。
 
 ```js
@@ -138,24 +159,21 @@ class MeetingRoomManager {
     }
     ...
 }
+
 // 加入会议API端点
 app.post('/api/join-meeting', (req, res) => {
   try {
     const { roomCode } = req.body;
-
     if (!roomCode) {
-      return res.status(400).json({ success: false, error: '请提供会议室代码（roomCode）' });
+      return res.status(400).json({ success: false, error: '缺少roomCode' });
     }
-
     const room = meetingRoomManager.getRoom(roomCode);
     if (!room) {
-      return res.status(404).json({ success: false, error: '会议室不存在（roomCode）' });
+      return res.status(404).json({ success: false, error: '会议室不存在' });
     }
-
-    res.json({ success: true, roomCode: room.code });
-  } catch (error) {
-    console.error('加入会议室时出错:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.json({ success: true, roomCode });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 ```
@@ -252,234 +270,88 @@ leaveMeeting() {
 
 ### 会议页基础功能后端实现
 
-因为我们的项目会支持音频通信，语音转写等功能，所以websocket实现会更加复杂。我们会手动处理更多websocket的内容，包括握手、消息解析和发送、支持文本和二进制消息等。
-
-手动实现websocket，让我们可以直接访问底层socket的 data 事件，获得原始的二进制数据；可以根据WebSocket协议的帧格式（opCode）精确识别二进制消息；可以自定义二进制数据的处理逻辑，优化传输效率。
-
 下面来看代码，websocket连接直接挂钩的就是`进入会议室`和`离开会议室`功能；
 
 **进入会议室**
 
-
 ```js
+// WebSocket
 server.on('upgrade', (req, socket, head) => {
-  // 从URL中提取会议室代码
   const url = new URL(req.url, `http://${req.headers.host}`);
   const roomCode = url.searchParams.get('roomCode');
-
   if (!roomCode) {
-    socket.write('HTTP/1.1 400 Bad Request\\r\n\r\n');
     socket.destroy();
     return;
   }
-
-  // 处理WebSocket握手
-  const key = req.headers['sec-websocket-key'];
-  const hash = crypto.createHash('sha1').update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64');
-
-  const responseHeaders = [
-    'HTTP/1.1 101 Switching Protocols',
-    'Upgrade: websocket',
-    'Connection: Upgrade',
-    `Sec-WebSocket-Accept: ${hash}`,
-    'Access-Control-Allow-Origin: *'
-  ];
-
-  socket.write(responseHeaders.join('\r\n') + '\r\n\r\n');
-
-  // 为socket分配唯一ID
-  socket.id = `socket_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-
-  // 加入会议室
-  const room = meetingRoomManager.joinRoom(roomCode, socket.id);
-  // 现在 joinRoom 总是会返回一个房间，不需要检查是否为 null
-
-  // 存储客户端连接
-  clients.push(socket);
-  socket.roomCode = roomCode;
-
-  console.log(`用户连接到会议室 ${roomCode}`);
-
-  // 发送当前画布状态给新连接的用户
-  const canvasState = meetingRoomManager.getCanvasState(roomCode);
-  const canvasStateMessage = JSON.stringify({ type: 'canvasState', data: canvasState });
-  sendWebSocketMessage(socket, canvasStateMessage);
-
-  // 发送 socketId 给客户端
-  const socketIdMessage = JSON.stringify({ type: 'socketId', data: socket.id });
-  sendWebSocketMessage(socket, socketIdMessage);
-
-  // 存储语音转写服务实例
-  let speechService = null;
-
-  // 处理消息
-  socket.on('data', (data) => {
-    try {
-      // 检查是否是二进制数据（音频数据）
-      if (Buffer.isBuffer(data) && data.length > 0) {
-        const firstByte = data[0];
-        const opCode = firstByte & 0x0F;
-        console.log('收到数据，长度:', data.length, 'opCode:', opCode);
-        // WebSocket关闭帧的opCode是8
-        if (opCode === 8) {
-          console.log('收到关闭帧，关闭连接');
-          socket.destroy();
-          return;
-        }
-        // WebSocket二进制消息的opCode是2
-        if (opCode === 2) { // 处理音频数据
-          ...
-        } else {
-          console.log('收到非音频数据，opCode:', opCode);
-        }
-      }
-
-      // 简单的WebSocket消息解析（仅处理文本消息）
-      const message = parseWebSocketMessage(data);
-      if (message && message !== 'undefined') {
-        try {
-          const parsedData = JSON.parse(message);
-          if (parsedData.type === 'draw') {
-            ...
-          } else if (parsedData.type === 'text') {
-            ...
-          } else if ...
-        } catch (error) {
-          console.error('解析消息出错:', error);
-        }
-      }
-    } catch (error) {
-      console.error('处理消息出错:', error);
-    }
-  });
-
-  socket.on('close', () => {
-    // 关闭语音转写服务
-    if (speechService) {
-      speechService.close();
-      speechService = null;
-    }
-
-    // 从会议室中移除用户
-    if (socket.roomCode) {
-      console.log(`用户与会议室 ${socket.roomCode} 断开连接`);
-      meetingRoomManager.leaveRoom(socket.roomCode, socket.id);
-      console.log(`用户与会议室 ${socket.roomCode} 断开连接`);
-    }
-
-    // 从客户端列表中移除
-    clients = clients.filter(client => client !== socket);
-  });
-
-  socket.on('error', (error) => {
-    console.error('Socket error:', error);
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    wss.emit('connection', ws, req, roomCode);
   });
 });
 
+wss.on('connection', (ws, req, roomCode) => {
+  ws.id = `socket_${Date.now()}`;
+  ws.roomCode = roomCode;
+  meetingRoomManager.joinRoom(roomCode, ws.id);
+  clients.push(ws);
+
+  ws.send(JSON.stringify({
+    type: 'canvasState',
+    data: meetingRoomManager.getCanvasState(roomCode)
+  }));
+  ws.send(JSON.stringify({
+    type: 'socketId',
+    data: ws.id
+  }));
+  ...
+});
 ```
 
-## 实时协作功能(websocket信息传输)
+**（结合ai讲解学习）**
 
-上面讲到后端加入/离开会议时已经开始接触到websocket的消息处理了，那么不妨顺着讲，在这里把项目的websocket的消息处理做一个彻底的讲解。这是整个项目的根本，也是最核心，必需的基础。
+这里我们监听upgrade事件；
 
-之前已经讲到我们需要手动实现websocket，有很多细节需要考虑，这里就来讲信息的处理。
+给每个用户(socket)分配id，这便于后续的消息传递。
+``` js
+// 为socket分配唯一ID
+ws.id = `socket_${Date.now()}`;
+```
+加入会议室的joinRoom之前没有展示，但是也很简单，逻辑上就是需要的话(无房间/旧空房间)新建房间，设置房间属性(创建时间，成员列表等)；创建成员，设置成员属性(昵称，加入时间等)，添加进房间成员列表，最后返回房间，很简单的常规代码，这里就不展示了；
 
-### 前端
+可以看到按照上面的流程，我们就完成了**进入会议室**的功能；这里顺便讲一讲进入会议室后顺带会做的内容：**进入会议室后需要获取当前的白板内容，保障后进入会议的成员能够看到之前的白板内容**(至于这里用来发送传递的画布状态等信息是怎么处理的，在[后面](#)我们再讲解)，同时，刚刚分配的socketId也需要发送给客户端，方便后续的消息传递。
 
-### 后端
+**离开与清空会议室**
+
+最后我们来讲解一下离开会议室的功能：这部分功能很简单，其实就是前端关闭websocket连接，后端也需要清理对应的连接内容，包括语音，调用leaveRoom(减少房间成员数，移除成员，更新房间属性，为0则移除该房间)，和joinRoom一样很简单常规，这里就不展示了。
 ```js
-// 发送WebSocket消息
-function sendWebSocketMessage(socket, message) {
-  const length = Buffer.byteLength(message, 'utf8');
-  let buffer;
-
-  if (length < 126) {
-    buffer = Buffer.alloc(2 + length);
-    buffer[0] = 0x81; // 文本消息，FIN=1
-    buffer[1] = length;
-  } else if (length < 65536) {
-    buffer = Buffer.alloc(4 + length);
-    buffer[0] = 0x81;
-    buffer[1] = 126;
-    buffer.writeUInt16BE(length, 2);
-  } else {
-    buffer = Buffer.alloc(10 + length);
-    buffer[0] = 0x81;
-    buffer[1] = 127;
-    buffer.writeBigUInt64BE(BigInt(length), 2);
-  }
-
-  buffer.write(message, length < 126 ? 2 : length < 65536 ? 4 : 10);
-  socket.write(buffer);
-}
-
-// 发送WebSocket二进制消息
-function sendWebSocketBinaryMessage(socket, binaryData) {
-  const length = binaryData.length;
-  let buffer;
-
-  if (length < 126) {
-    buffer = Buffer.alloc(2 + length);
-    buffer[0] = 0x82; // 二进制消息，FIN=1
-    buffer[1] = length;
-  } else if (length < 65536) {
-    buffer = Buffer.alloc(4 + length);
-    buffer[0] = 0x82;
-    buffer[1] = 126;
-    buffer.writeUInt16BE(length, 2);
-  } else {
-    buffer = Buffer.alloc(10 + length);
-    buffer[0] = 0x82;
-    buffer[1] = 127;
-    buffer.writeBigUInt64BE(BigInt(length), 2);
-  }
-
-  // 复制二进制数据到缓冲区
-  binaryData.copy(buffer, length < 126 ? 2 : length < 65536 ? 4 : 10);
-  socket.write(buffer);
-}
-
-// 解析WebSocket消息
-function parseWebSocketMessage(data) {
-  try {
-    const firstByte = data[0];
-    const isFinal = (firstByte & 0x80) !== 0;
-    const opCode = firstByte & 0x0F;
-
-    if (opCode !== 1) return null; // 仅处理文本消息
-
-    const secondByte = data[1];
-    const isMasked = (secondByte & 0x80) !== 0;
-    let payloadLength = secondByte & 0x7F;
-    let offset = 2;
-
-    if (payloadLength === 126) {
-      payloadLength = data.readUInt16BE(offset);
-      offset += 2;
-    } else if (payloadLength === 127) {
-      payloadLength = Number(data.readBigUInt64BE(offset));
-      offset += 8;
-    }
-
-    if (isMasked) {
-      const mask = data.slice(offset, offset + 4);
-      offset += 4;
-      const payload = data.slice(offset, offset + payloadLength);
-
-      for (let i = 0; i < payload.length; i++) {
-        payload[i] ^= mask[i % 4];
-      }
-
-      return payload.toString('utf8');
-    } else {
-      return data.slice(offset, offset + payloadLength).toString('utf8');
-    }
-  } catch (error) {
-    console.error('解析消息出错:', error);
-    return null;
-  }
-}
+wss.on('connection', (ws, req, roomCode) => {
+  ...
+  ws.on('close', () => {
+    speechService?.close();
+    meetingRoomManager.leaveRoom(ws.roomCode, ws.id);
+    clients = clients.filter(c => c !== ws);
+  });
+  ws.on('error', () => { });
+});
 ```
+关于移除会议室，还做了一个兜底处理：
+```js
+class MeetingRoomManager {
+  ...
+  cleanupEmptyRooms() {
+    const now = new Date();
+    for (const [code, r] of this.rooms.entries()) {
+      if (r.members.length === 0 || now - r.lastActivityTime > 10 * 60 * 1000) {
+        this.rooms.delete(code);
+      }
+    }
+  }
+}
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ 服务启动: http://192.168.248.168:${PORT}`);
+  setInterval(() => meetingRoomManager.cleanupEmptyRooms(), 5 * 60 * 1000);
+});
+```
+这个方法在服务端启动的位置定时调用，每5分钟调用一次。检查所有房间，如果房间成员数为0，或者最后活动时间超过10分钟，我们就移除该房间。这样能够及时清理空房间，避免资源浪费。
 
 ## 白板功能
 
