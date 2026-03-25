@@ -28,7 +28,8 @@
 围绕项目结构与设计功能，我们划分为以下几个模块进行讲解：
 - 首页基础功能(会议创建与加入，请求/操作成功失败的消息提示)
 - 会议页基础功能(连接开始会议，断开连接离开会议，会议室自动清理功能)
-- 实时协作白板功能(多人共享白板，绘制与图形美化功能,文本输入功能)
+- 实时协作功能(websocket信息传输实现多人共享)
+- 白板功能(绘制与图形美化功能,文本输入功能)
 - 语音转写字幕功能
 - 会议摘要生成功能
 
@@ -61,7 +62,7 @@
 
 创建会议按钮，直接触发对应方法发送请求，获取会议码，进入会议室；
 
-加入会议按钮，触发对应方法，依靠v-model绑定输入框，获取会议码发送请求，根据请求结果加入会议室/提示错误；<span style="color: green;">**需要注意的是，首页部分并没有真正的加入会议室**</span>，加入会议室开始会议是涉及到`websocket`连接的，项目设计中加入会议室是进入[会议室页面](#)后才进行的连接操作，首页进行的操作其实只有校验会议室代码是否存在，决定是否进入会议室页面，仅此而已；因此这里发送请求只要发送会议室代码给后台检测一下是否有这个会议室即可。
+加入会议按钮，触发对应方法，依靠v-model绑定输入框，获取会议码发送请求，根据请求结果加入会议室/提示错误；<span style="color: green;">**需要注意的是，首页部分并没有真正的加入会议室**</span>，加入会议室开始会议是涉及到`websocket`连接的，项目设计中加入会议室是进入[会议室页面](#会议页前端实现)后才进行的连接操作，首页进行的操作其实只有校验会议室代码是否存在，决定是否进入会议室页面，仅此而已；因此这里发送请求只要发送会议室代码给后台检测一下是否有这个会议室即可。
 
 因为非常简单，只是发送一些请求，所以这里就不贴出代码了。
 
@@ -75,6 +76,7 @@
 - 清理无人或长时间无活动的会议室
 
 **唯一代码与创建会议室**
+
 创建一个会议室管理类，用于管理所有的会议室。每个会议室都有一个唯一的会议室代码，用于标识会议室。
 
 通过`map`来存储所有的会议室，键为会议室代码，值为会议室对象。生成唯一会议室代码时，检测`map`来确保唯一性；创建会议室的api就是调用这个方法，生成一个`code`，然后创建一个会议室对象(包含会议室代码、创建时间、最后活动时间、成员列表、画布状态、图形美化状态)，最后将会议室对象存储到`map`中，返回`code`给前端；
@@ -125,7 +127,7 @@ app.post('/api/create-meeting', (req, res) => {
 });
 ```
 **加入会议室**
-<span style="color: green;">**需要注意的是，首页部分并没有真正的加入会议室**</span>，加入会议室，开始会议是涉及到`websocket`连接的，项目设计中加入会议室是进入[会议室页面](#)后才进行的连接操作，首页进行的操作其实只有校验会议室代码是否存在，决定是否进入会议室页面，仅此而已；api接口也只需要从`map`中get一下是否有请求时发送过来的会议室代码即可。
+<span style="color: green;">**需要注意的是，首页部分并没有真正的加入会议室**</span>，加入会议室，开始会议是涉及到`websocket`连接的，项目设计中加入会议室是进入[会议室页面](#会议页前端实现)后才进行的连接操作，首页进行的操作其实只有校验会议室代码是否存在，决定是否进入会议室页面，仅此而已；api接口也只需要从`map`中get一下是否有请求时发送过来的会议室代码即可。
 
 ```js
 class MeetingRoomManager {
@@ -159,16 +161,327 @@ app.post('/api/join-meeting', (req, res) => {
 ```
 
 ## 会议页基础功能
-- 加入会议室
-- 离开会议室
+
+继续讲会议页的基础功能，主要如下：
+- 进入会议室(websocket连接)
+- 离开会议室(websocket断开连接)
 - 清理无人或长时间无活动的会议室
 
+### 会议页基础功能前端实现
+**进入会议室**
+
+之前已经讲过，会议页是一个组件，由`v-if`指令来控制显示隐藏。当用户创建/加入会议室成功(会议室代码存在)，这个组件被显示出来，传入会议室代码作为props，在组件生命周期钩子中添加对应的连接逻辑(创建websocket连接，并做数据处理)
+```js
+export default {
+  name: 'Whiteboard',
+  props: {
+    roomCode: {
+      type: String,
+      required: true
+    }
+  },
+  data() {
+    return {
+      ...
+    }
+  },
+  mounted() {
+    this.canvas = this.$refs.canvas;
+    this.ctx = this.canvas.getContext('2d');
+    this.setupCanvas();
+    this.setupWebSocket();
+  },
+  beforeUnmount() {
+    // 组件销毁时关闭 WebSocket 连接
+    this.closeWebSocket();
+  },
+  ...
+  methods: {
+    setupCanvas() {
+      this.ctx.lineCap = 'round';
+      this.ctx.lineJoin = 'round';
+      this.ctx.strokeStyle = this.color;
+      this.ctx.lineWidth = this.lineWidth;
+    },
+    setupWebSocket() {
+      try {
+        // 使用传入的roomCode建立WebSocket连接
+        console.log(`与会议室${this.roomCode}建立WebSocket连接`);
+        this.socket = new WebSocket(`ws://192.168.118.168:8080?roomCode=${this.roomCode}`);
+
+        this.socket.onopen = () => {
+          console.log(`与会议室${this.roomCode}的WebSocket连接成功，readyState: ${this.socket.readyState}`);
+          // 发送昵称信息到服务器
+          this.sendWebSocketMessage('更新昵称', { nickname: this.nickname });
+        };
+
+        this.socket.onmessage = (event) => {
+          ...数据处理逻辑
+        };
+        this.socket.onclose = () => {
+          console.log(`WebSocket 已断开连接，会议室: ${this.roomCode}`);
+        };
+
+        this.socket.onerror = (error) => {
+          console.error(`WebSocket 错误: ${error}`);
+        };
+      } catch (error) {
+        console.error(`设置WebSocket连接时出错: ${error}`);
+      }
+    }
+  }
+}
+```
+
+**离开会议室，为清理会议室提供支持**
+
+同理，离开会议室时需要断开连接，我们提供了离开会议的按钮，同时在组件的生命周期钩子中添加对应的断开连接逻辑(这个在[上面](#会议页前端实现)已经展示过)，这样的操作能够即使用户不点击离开会议按钮，也能及时断开与服务器的连接(这对于多人会议的消息传递，以及清理会议室的功能很重要)。
+
+当然这里因为创建/加入会议都在父组件中实现，并且希望白板功能划分明确，离开会议的功能在父组件中实现，也就是首页，但是因为这是在进入会议后(进入会议页)的功能，又涉及到`websocket`连接，所以还是写到这里：
+
+下面是父组件离开会议的代码：直接调整信号关闭组件，组件的卸载生命周期钩子会关闭websocket连接。
+```js
+leaveMeeting() {
+  this.isInMeeting = false
+  this.currentRoomCode = ''
+  this.roomCode = ''
+  console.log('离开会议成功');
+}
+```
 
 
+### 会议页基础功能后端实现
+
+因为我们的项目会支持音频通信，语音转写等功能，所以websocket实现会更加复杂。我们会手动处理更多websocket的内容，包括握手、消息解析和发送、支持文本和二进制消息等。
+
+手动实现websocket，让我们可以直接访问底层socket的 data 事件，获得原始的二进制数据；可以根据WebSocket协议的帧格式（opCode）精确识别二进制消息；可以自定义二进制数据的处理逻辑，优化传输效率。
+
+下面来看代码，websocket连接直接挂钩的就是`进入会议室`和`离开会议室`功能；
+
+**进入会议室**
 
 
+```js
+server.on('upgrade', (req, socket, head) => {
+  // 从URL中提取会议室代码
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const roomCode = url.searchParams.get('roomCode');
 
+  if (!roomCode) {
+    socket.write('HTTP/1.1 400 Bad Request\\r\n\r\n');
+    socket.destroy();
+    return;
+  }
 
+  // 处理WebSocket握手
+  const key = req.headers['sec-websocket-key'];
+  const hash = crypto.createHash('sha1').update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64');
+
+  const responseHeaders = [
+    'HTTP/1.1 101 Switching Protocols',
+    'Upgrade: websocket',
+    'Connection: Upgrade',
+    `Sec-WebSocket-Accept: ${hash}`,
+    'Access-Control-Allow-Origin: *'
+  ];
+
+  socket.write(responseHeaders.join('\r\n') + '\r\n\r\n');
+
+  // 为socket分配唯一ID
+  socket.id = `socket_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+
+  // 加入会议室
+  const room = meetingRoomManager.joinRoom(roomCode, socket.id);
+  // 现在 joinRoom 总是会返回一个房间，不需要检查是否为 null
+
+  // 存储客户端连接
+  clients.push(socket);
+  socket.roomCode = roomCode;
+
+  console.log(`用户连接到会议室 ${roomCode}`);
+
+  // 发送当前画布状态给新连接的用户
+  const canvasState = meetingRoomManager.getCanvasState(roomCode);
+  const canvasStateMessage = JSON.stringify({ type: 'canvasState', data: canvasState });
+  sendWebSocketMessage(socket, canvasStateMessage);
+
+  // 发送 socketId 给客户端
+  const socketIdMessage = JSON.stringify({ type: 'socketId', data: socket.id });
+  sendWebSocketMessage(socket, socketIdMessage);
+
+  // 存储语音转写服务实例
+  let speechService = null;
+
+  // 处理消息
+  socket.on('data', (data) => {
+    try {
+      // 检查是否是二进制数据（音频数据）
+      if (Buffer.isBuffer(data) && data.length > 0) {
+        const firstByte = data[0];
+        const opCode = firstByte & 0x0F;
+        console.log('收到数据，长度:', data.length, 'opCode:', opCode);
+        // WebSocket关闭帧的opCode是8
+        if (opCode === 8) {
+          console.log('收到关闭帧，关闭连接');
+          socket.destroy();
+          return;
+        }
+        // WebSocket二进制消息的opCode是2
+        if (opCode === 2) { // 处理音频数据
+          ...
+        } else {
+          console.log('收到非音频数据，opCode:', opCode);
+        }
+      }
+
+      // 简单的WebSocket消息解析（仅处理文本消息）
+      const message = parseWebSocketMessage(data);
+      if (message && message !== 'undefined') {
+        try {
+          const parsedData = JSON.parse(message);
+          if (parsedData.type === 'draw') {
+            ...
+          } else if (parsedData.type === 'text') {
+            ...
+          } else if ...
+        } catch (error) {
+          console.error('解析消息出错:', error);
+        }
+      }
+    } catch (error) {
+      console.error('处理消息出错:', error);
+    }
+  });
+
+  socket.on('close', () => {
+    // 关闭语音转写服务
+    if (speechService) {
+      speechService.close();
+      speechService = null;
+    }
+
+    // 从会议室中移除用户
+    if (socket.roomCode) {
+      console.log(`用户与会议室 ${socket.roomCode} 断开连接`);
+      meetingRoomManager.leaveRoom(socket.roomCode, socket.id);
+      console.log(`用户与会议室 ${socket.roomCode} 断开连接`);
+    }
+
+    // 从客户端列表中移除
+    clients = clients.filter(client => client !== socket);
+  });
+
+  socket.on('error', (error) => {
+    console.error('Socket error:', error);
+  });
+});
+
+```
+
+## 实时协作功能(websocket信息传输)
+
+上面讲到后端加入/离开会议时已经开始接触到websocket的消息处理了，那么不妨顺着讲，在这里把项目的websocket的消息处理做一个彻底的讲解。这是整个项目的根本，也是最核心，必需的基础。
+
+之前已经讲到我们需要手动实现websocket，有很多细节需要考虑，这里就来讲信息的处理。
+
+### 前端
+
+### 后端
+```js
+// 发送WebSocket消息
+function sendWebSocketMessage(socket, message) {
+  const length = Buffer.byteLength(message, 'utf8');
+  let buffer;
+
+  if (length < 126) {
+    buffer = Buffer.alloc(2 + length);
+    buffer[0] = 0x81; // 文本消息，FIN=1
+    buffer[1] = length;
+  } else if (length < 65536) {
+    buffer = Buffer.alloc(4 + length);
+    buffer[0] = 0x81;
+    buffer[1] = 126;
+    buffer.writeUInt16BE(length, 2);
+  } else {
+    buffer = Buffer.alloc(10 + length);
+    buffer[0] = 0x81;
+    buffer[1] = 127;
+    buffer.writeBigUInt64BE(BigInt(length), 2);
+  }
+
+  buffer.write(message, length < 126 ? 2 : length < 65536 ? 4 : 10);
+  socket.write(buffer);
+}
+
+// 发送WebSocket二进制消息
+function sendWebSocketBinaryMessage(socket, binaryData) {
+  const length = binaryData.length;
+  let buffer;
+
+  if (length < 126) {
+    buffer = Buffer.alloc(2 + length);
+    buffer[0] = 0x82; // 二进制消息，FIN=1
+    buffer[1] = length;
+  } else if (length < 65536) {
+    buffer = Buffer.alloc(4 + length);
+    buffer[0] = 0x82;
+    buffer[1] = 126;
+    buffer.writeUInt16BE(length, 2);
+  } else {
+    buffer = Buffer.alloc(10 + length);
+    buffer[0] = 0x82;
+    buffer[1] = 127;
+    buffer.writeBigUInt64BE(BigInt(length), 2);
+  }
+
+  // 复制二进制数据到缓冲区
+  binaryData.copy(buffer, length < 126 ? 2 : length < 65536 ? 4 : 10);
+  socket.write(buffer);
+}
+
+// 解析WebSocket消息
+function parseWebSocketMessage(data) {
+  try {
+    const firstByte = data[0];
+    const isFinal = (firstByte & 0x80) !== 0;
+    const opCode = firstByte & 0x0F;
+
+    if (opCode !== 1) return null; // 仅处理文本消息
+
+    const secondByte = data[1];
+    const isMasked = (secondByte & 0x80) !== 0;
+    let payloadLength = secondByte & 0x7F;
+    let offset = 2;
+
+    if (payloadLength === 126) {
+      payloadLength = data.readUInt16BE(offset);
+      offset += 2;
+    } else if (payloadLength === 127) {
+      payloadLength = Number(data.readBigUInt64BE(offset));
+      offset += 8;
+    }
+
+    if (isMasked) {
+      const mask = data.slice(offset, offset + 4);
+      offset += 4;
+      const payload = data.slice(offset, offset + payloadLength);
+
+      for (let i = 0; i < payload.length; i++) {
+        payload[i] ^= mask[i % 4];
+      }
+
+      return payload.toString('utf8');
+    } else {
+      return data.slice(offset, offset + payloadLength).toString('utf8');
+    }
+  } catch (error) {
+    console.error('解析消息出错:', error);
+    return null;
+  }
+}
+```
+
+## 白板功能
 
 
 
