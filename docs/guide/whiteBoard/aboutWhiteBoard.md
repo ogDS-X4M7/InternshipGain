@@ -306,18 +306,47 @@ wss.on('connection', (ws, req, roomCode) => {
 });
 ```
 
-**（结合ai讲解学习）**
+这里我们监听upgrade事件；和之前直接监听connection事件不同，这是因为我们需要在握手前验证参数(会议室代码roomCode)是否存在，若不存在，`socket.destroy();`销毁连接。因此我们会需要一个握手前的“生命周期钩子”upgrade事件，来实现这里的校验；
+``` js
+server.on('upgrade', (req, socket, head) => {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const roomCode = url.searchParams.get('roomCode');
+  if (!roomCode) {
+    socket.destroy();
+    return;
+  }
+  ...
+});
+```
+校验逻辑处理完毕了，那么接下来就是握手，仍然是使用监听connection事件来实现，**用handleUpgrade方法触发connection事件**。
+``` js
+wss.handleUpgrade(req, socket, head, (ws) => {
+  wss.emit('connection', ws, req, roomCode);
+});
+```
+<span style="color:green;">**简而言之，只是采用`upgrade`事件在握手前做一些校验，如果校验成功，才用`handleUpgrade`方法去触发`connection`事件；失败就销毁连接。**</span>
 
-这里我们监听upgrade事件；
-
-给每个用户(socket)分配id，这便于后续的消息传递。
+继续下面的内容，握手连接成功后，需要给每个用户(socket)分配id，这便于后续的消息传递。
 ``` js
 // 为socket分配唯一ID
 ws.id = `socket_${Date.now()}`;
+ws.roomCode = roomCode;
+meetingRoomManager.joinRoom(roomCode, ws.id);
+clients.push(ws);
 ```
 加入会议室的joinRoom之前没有展示，但是也很简单，逻辑上就是需要的话(无房间/旧空房间)新建房间，设置房间属性(创建时间，成员列表等)；创建成员，设置成员属性(昵称，加入时间等)，添加进房间成员列表，最后返回房间，很简单的常规代码，这里就不展示了；
 
-可以看到按照上面的流程，我们就完成了**进入会议室**的功能；这里顺便讲一讲进入会议室后顺带会做的内容：**进入会议室后需要获取当前的白板内容，保障后进入会议的成员能够看到之前的白板内容**(至于这里用来发送传递的画布状态等信息是怎么处理的，在[后面](#)我们再讲解)，同时，刚刚分配的socketId也需要发送给客户端，方便后续的消息传递。
+可以看到按照上面的流程，我们就完成了**进入会议室**的功能；这里顺便讲一讲进入会议室后顺带会做的内容：**进入会议室后需要获取当前的白板内容，保障后进入会议的成员能够看到之前的白板内容**(至于这里用来发送传递的画布状态等信息是怎么处理的，在[后面](#)我们再讲解)，同时，**刚刚分配的socketId也需要发送给客户端**，方便后续的消息传递。
+``` js
+ws.send(JSON.stringify({
+  type: 'canvasState',
+  data: meetingRoomManager.getCanvasState(roomCode)
+}));
+ws.send(JSON.stringify({
+  type: 'socketId',
+  data: ws.id
+}));
+```
 
 **离开与清空会议室**
 
@@ -354,242 +383,29 @@ server.listen(PORT, '0.0.0.0', () => {
 这个方法在服务端启动的位置定时调用，每5分钟调用一次。检查所有房间，如果房间成员数为0，或者最后活动时间超过10分钟，我们就移除该房间。这样能够及时清理空房间，避免资源浪费。
 
 ## 白板功能
+接下来就是项目核心的白板功能了，这部分有非常丰富的内容，包括：
+- 实时协作白板功能
+  - 基础功能：画笔，橡皮，文本，形状，颜色，大小等
+  - 通过websocket实现共享白板
+- 美化白板操作
+  - 手绘图形(矩形，圆，菱形，箭头)识别美化，以及对应的撤回实现
+  - websocket同步美化与撤回美化
+
+## 语音转写与会议摘要功能
+这部分都是结合ai大模型实现，会讲解如何调用大模型，以及传递给大模型前的各种参数处理操作；
+- 语音转写功能
+  - 获取用户语音输入，处理音频数据
+  - 调用大模型进行语音转写，处理返回文本结果
+  - 实现字幕功能
+- 会议摘要功能
+  - 从会议中提取重要信息，生成会议摘要
+  - 调用大模型进行会议摘要，处理返回文本结果
+  - 可视化展示
 
 
 
 
 
 
-
-
-
-
-```javascript
-// 会议室管理
-class MeetingRoomManager {
-  constructor() {
-    this.rooms = new Map();
-  }
-
-  // 生成4-6位随机数字作为会议室快捷号
-  generateRoomCode() {
-    let code;
-    do {
-      // 生成4-6位随机数字
-      const length = Math.floor(Math.random() * 3) + 4; // 4-6位
-      code = '';
-      for (let i = 0; i < length; i++) {
-        code += Math.floor(Math.random() * 10);
-      }
-    } while (this.rooms.has(code)); // 确保唯一性
-    return code;
-  }
-
-  // 创建会议室
-  createRoom() {
-    const code = this.generateRoomCode();
-    const room = {
-      code,
-      createdAt: new Date(),
-      lastActivityTime: new Date(),
-      members: [],
-      canvasState: [],
-      beautifyState: null
-    };
-    this.rooms.set(code, room);
-    return room;
-  }
-
-  // 加入会议室
-  joinRoom(code, socketId) {
-    let room = this.rooms.get(code);
-
-    // 检查会议室是否存在且为空
-    if (room && room.members.length === 0) {
-      // 如果会议室存在但为空，创建一个新的空会议室
-      console.log(`Meeting room ${code} is empty, creating new one`);
-      room = {
-        code,
-        createdAt: new Date(),
-        lastActivityTime: new Date(),
-        members: [],
-        canvasState: [],
-        beautifyState: null
-      };
-      this.rooms.set(code, room);
-    } else if (!room) {
-      // 如果会议室不存在，创建一个新的
-      room = {
-        code,
-        createdAt: new Date(),
-        lastActivityTime: new Date(),
-        members: [],
-        canvasState: [],
-        beautifyState: null
-      };
-      this.rooms.set(code, room);
-      console.log(`Meeting room ${code} created for new join`);
-    } else {
-      // 更新最后活动时间
-      room.lastActivityTime = new Date();
-    }
-
-    // 检查是否已加入
-    const existingMember = room.members.find(member => member.socketId === socketId);
-    if (existingMember) {
-      return room;
-    }
-
-    // 添加新成员
-    const member = {
-      id: `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-      socketId,
-      joinedAt: new Date(),
-      nickname: `用户${Math.floor(Math.random() * 1000)}`
-    };
-    room.members.push(member);
-    return room;
-  }
-
-  // 离开会议室
-  leaveRoom(code, socketId) {
-    const room = this.rooms.get(code);
-    if (!room) {
-      console.log(`Room ${code} not found`);
-      return;
-    }
-
-    console.log(`Leaving room ${code}, current members: ${room.members.length}`);
-    room.members = room.members.filter(member => member.socketId !== socketId);
-    console.log(`After leaving, members left: ${room.members.length}`);
-
-    // 如果会议室为空，删除会议室
-    if (room.members.length === 0) {
-      console.log(`Room ${code} is empty, deleting`);
-      this.rooms.delete(code);
-      console.log(`Meeting room ${code} deleted as all members left`);
-    }
-  }
-
-  // 定期检查并清理无人或长时间无活动的会议室
-  cleanupEmptyRooms() {
-    const now = new Date();
-    const timeout = 10 * 60 * 1000; // 10分钟超时
-    let deletedRooms = 0;
-
-    for (const [code, room] of this.rooms.entries()) {
-      // 检查会议室是否为空或长时间无活动
-      const isEmpty = room.members.length === 0;
-      const isInactive = now - room.lastActivityTime > timeout;
-
-      if (isEmpty || isInactive) {
-        console.log(`Cleaning up room ${code} - ${isEmpty ? 'empty' : 'inactive'}`);
-        this.rooms.delete(code);
-        deletedRooms++;
-      }
-    }
-
-    if (deletedRooms > 0) {
-      console.log(`Cleaned up ${deletedRooms} rooms`);
-    }
-  }
-}
-```
-
-**API 端点**：
-**离开会议**：
-
-```javascript
-// 离开会议API端点
-app.post('/api/leave-meeting', (req, res) => {
-  try {
-    const { roomCode, socketId } = req.body;
-
-    if (!roomCode || !socketId) {
-      return res.status(400).json({ success: false, error: 'Room code and socketId are required' });
-    }
-
-    // 从会议室中移除用户
-    meetingRoomManager.leaveRoom(roomCode, socketId);
-
-    res.json({ success: true, message: 'Left meeting successfully' });
-  } catch (error) {
-    console.error('Error leaving meeting:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-```
-
-#### 会议室自动清理功能
-
-为了避免资源浪费，系统实现了会议室自动清理机制：
-
-**实现原理**：
-
-- 定期检查所有会议室的状态
-- 清理条件：
-  1. 会议室为空（没有成员）
-  2. 会议室长时间无活动（超过10分钟）
-- 清理频率：每5分钟执行一次
-
-**核心代码**：
-
-```javascript
-// 定期检查并清理无人或长时间无活动的会议室
-cleanupEmptyRooms() {
-  const now = new Date();
-  const timeout = 10 * 60 * 1000; // 10分钟超时
-  let deletedRooms = 0;
-
-  for (const [code, room] of this.rooms.entries()) {
-    // 检查会议室是否为空或长时间无活动
-    const isEmpty = room.members.length === 0;
-    const isInactive = now - room.lastActivityTime > timeout;
-
-    if (isEmpty || isInactive) {
-      console.log(`Cleaning up room ${code} - ${isEmpty ? 'empty' : 'inactive'}`);
-      this.rooms.delete(code);
-      deletedRooms++;
-    }
-  }
-
-  if (deletedRooms > 0) {
-    console.log(`Cleaned up ${deletedRooms} rooms`);
-  }
-}
-
-// 启动定时清理任务
-const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-
-  // 每5分钟检查并清理一次无人的会议室
-  setInterval(() => {
-    meetingRoomManager.cleanupEmptyRooms();
-  }, 5 * 60 * 1000);
-  console.log('Empty room cleanup scheduled every 5 minutes');
-});
-```
-
-#### 技术要点
-
-1. **会议室代码生成**：
-   - 生成4-6位随机数字作为会议室代码
-   - 确保代码的唯一性，避免重复
-2. **会议室状态管理**：
-   - 使用 Map 数据结构存储会议室信息
-   - 每个会议室包含成员列表、画布状态等信息
-   - 跟踪会议室的最后活动时间，用于判断是否需要清理
-3. **WebSocket 连接**：
-   - 当用户加入会议时，建立 WebSocket 连接
-   - 连接时发送当前画布状态给新用户
-   - 断开连接时从会议室中移除用户
-4. **错误处理**：
-   - 前端处理网络错误和服务器返回的错误
-   - 后端处理各种异常情况，确保系统稳定运行
-5. **用户体验**：
-   - 加入和创建会议时显示成功或错误提示
-   - 会议创建成功后自动显示会议代码
-   - 提示信息自动消失，不干扰用户操作
 
 ### 实时协作白板功能
