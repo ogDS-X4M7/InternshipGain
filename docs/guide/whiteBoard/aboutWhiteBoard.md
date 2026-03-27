@@ -395,6 +395,510 @@ server.listen(PORT, '0.0.0.0', () => {
 
 ### 实时协作白板基础功能
 
+这部分设计的功能众多，代码也比较多，因此对于每个部分功能分开讲解，分开展示，以便理解和阅读。这部分功能也是直接交由前端实现，因此贴出的代码也都是前端代码。
+#### 画笔与橡皮功能
+其实画笔功能在[之前的文档](./aboutCanvas#简单的白板实现)已经讲过，不过这里采取的是另一种分段的写法；对于简单的白板绘制确实是那样会更好，但因为我们的项目需求对于每一笔画都需要记录，甚至需要操作(比如美化、撤销等)，因此这里采取分段记录，即起始坐标，结束坐标都做记录并绘制；至于为什么橡皮功能也一起讲解，其实是因为<span style="color:green;">**橡皮功能的实现完全可以用画笔的逻辑来完成，橡皮可以看作是白色的画笔，逻辑复用就能够起到相同的效果**</span>；
+
+首先是常规的canvas画板，监听四个事件处理画笔绘制：同时白板需要工具栏，用于切换不同的画笔工具。
+```js
+<canvas
+  ref="canvas"
+  :width="width"
+  :height="height"
+  @mousedown="startDrawing"
+  @mousemove="draw"
+  @mouseup="stopDrawing"
+  @mouseleave="stopDrawing"
+></canvas>
+<div class="toolbar">
+  <button @click="setTool('pen')" :class="{ active: currentTool === 'pen' }">画笔</button>
+  <button @click="setTool('eraser')" :class="{ active: currentTool === 'eraser' }">橡皮</button>
+  <button @click="setTool('text')" :class="{ active: currentTool === 'text' }">文本</button>
+  <button @click="setTool('mouse')" :class="{ active: currentTool === 'mouse' }">鼠标</button>
+  <button @click="setTool('rectangle')" :class="{ active: currentTool === 'rectangle' }">矩形</button>
+    <button @click="setTool('circle')" :class="{ active: currentTool === 'circle' }">圆形</button>
+    <button @click="setTool('diamond')" :class="{ active: currentTool === 'diamond' }">菱形</button>
+    <button @click="setTool('arrow')" :class="{ active: currentTool === 'arrow' }">箭头</button>
+    <input type="color" v-model="color" />
+    <span>笔画粗细:</span>
+    <input type="range" v-model="lineWidth" min="1" max="10" />
+    <span>{{ lineWidth }}px</span>
+    <span>字体大小:</span>
+    <input type="range" v-model="fontSize" min="8" max="48" />
+    <span>{{ fontSize }}px</span>
+    <button @click="clearCanvas">清空</button>
+    <button @click="exportCanvas">导出</button>
+    <button @click="toggleSpeechRecognition" :class="{ active: isRecording }">
+      {{ isRecording ? '停止录音' : '开始录音' }}
+    </button>
+    <button @click="beautifyShape">美化图形</button>
+    <button @click="undoBeautify" :disabled="!originalElements">撤销美化</button>
+    <button @click="generateSummary">生成摘要</button>
+    <button @click="printTranscriptionHistory">打印发言内容</button>
+  <div class="nickname-container">
+    <span v-if="!showNicknameInput">{{ nickname }} <button @click="showNicknameInput = true">修改</button></span>
+    <div v-else class="nickname-input">
+      <input v-model="nickname" @keyup.enter="saveNickname" @blur="saveNickname" placeholder="输入昵称" />
+      <button @click="saveNickname">保存</button>
+      <button @click="showNicknameInput = false">取消</button>
+    </div>
+  </div>
+</div>
+```
+下面是与实现功能相关的方法：
+
+`setTool`方法：是用于标记当前使用的工具，比如画笔，橡皮，文本等，根据选择的工具不同，白板上的处理逻辑也需要相应的变化；
+
+`startDrawing`方法：可以看到我们<span style="color:green;">记录了起始坐标，结束坐标，并且将绘制图形的点都收集起来</span>，这是为了后续的[识别美化功能](#)的实现；在上面的绑定事件中，可以看到该方法绑定监听了`mousedown`事件，这意味着不只是绘制动作，其他在画板上点击开始的动作都会经过这个方法，这也是决定后续执行逻辑的关键，所以也能看到方法内执行一些判断；
+
+可以看到判断确认是我们画笔/橡皮动作时，除了常规的设置一个绘制信号以外，还<span style="color:green">为每一笔分配一个唯一的strokeId，使用socketId作为前缀</span>，这么做也是为了后续识别笔画进行美化，<span style="color:green">**请注意这里的一笔是指一次绘制完成，即一次鼠标按下到抬起，不是lineTo的意思；同时这里使用独立的socketId来生成唯一的strokeId，(socket和stroke很像但是不一样哈)，是为了区分多个用户各自绘制的内容**</span>
+
+`draw`方法：和`startDrawing`方法类似，更新坐标，记录绘制图形点；<span style="color:green;">将绘制内容保存进入`elements`数组，这是后面也经常用到的数组，用于记录画板上绘制的所有内容，可以支持画板内容全部重绘，这是很重要的功能，能够支持很多操作</span>
+
+`stopDrawing`方法：画笔和橡皮都已经在draw方法中逐段保存，因此这里只需要重置绘制信号，设置为false即可；如果是其他图形可能会需要做重绘处理，就放在下面讲解啦
+```js
+export default {
+  ...,
+  methods: {
+    setTool(tool) {
+      this.currentTool = tool;
+      this.isDrawing = false;
+      this.isAddingText = false;
+    },
+    startDrawing(e) {
+      const rect = this.canvas.getBoundingClientRect();
+      this.startX = e.clientX - rect.left;
+      this.startY = e.clientY - rect.top;
+      this.lastX = this.startX;
+      this.lastY = this.startY;
+      
+      // 清空绘制点数组，准备收集新图形的点
+      this.drawingPoints = [{ x: this.startX, y: this.startY }];
+      
+      if (this.currentTool === 'text' || this.currentTool === 'mouse') {
+        // 检查是否点击了调整手柄
+        ......
+      } else {
+        this.isDrawing = true;
+        // 为每一笔分配一个唯一的strokeId，使用socketId作为前缀
+        this.strokeId++;
+        this.currentStrokeId = `${this.socketId}_${this.strokeId}`;
+      }
+    },
+    draw(e) {
+      if (!this.isDrawing && !this.isAddingText) return;
+      
+      const rect = this.canvas.getBoundingClientRect();
+      const currentX = e.clientX - rect.left;
+      const currentY = e.clientY - rect.top;
+      
+      // 实时更新结束坐标
+      this.lastX = currentX;
+      this.lastY = currentY;
+      
+      if ((this.currentTool === 'text' || this.currentTool === 'mouse') && this.isAddingText) {
+        ......
+      } else if (this.currentTool === 'pen') {
+        this.ctx.strokeStyle = this.color;
+        this.ctx.lineWidth = this.lineWidth;
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.startX, this.startY);
+        this.ctx.lineTo(currentX, currentY);
+        this.ctx.stroke();
+        
+        // 保存画笔绘制的内容到elements数组
+        const element = {
+          type: 'pen',
+          startX: this.startX,
+          startY: this.startY,
+          lastX: currentX,
+          lastY: currentY,
+          color: this.color,
+          lineWidth: this.lineWidth,
+          strokeId: this.currentStrokeId
+        };
+        this.elements.push(element);
+        
+        // 收集绘制点用于图形识别
+        this.drawingPoints.push({ x: currentX, y: currentY });
+        
+        // 发送到服务器
+        this.sendWebSocketMessage('draw', element);
+        
+        // 更新起点坐标，实现连续绘制
+        this.startX = currentX;
+        this.startY = currentY;
+      } else if (this.currentTool === 'eraser') {
+        // 橡皮功能：绘制白色线条覆盖原有内容
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = this.lineWidth * 2; // 橡皮宽度是线条的2倍
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.startX, this.startY);
+        this.ctx.lineTo(currentX, currentY);
+        this.ctx.stroke();
+        
+        // 保存橡皮绘制的内容到elements数组
+        const element = {
+          type: 'eraser',
+          startX: this.startX,
+          startY: this.startY,
+          lastX: currentX,
+          lastY: currentY,
+          lineWidth: this.lineWidth * 2
+        };
+        this.elements.push(element);
+        
+        // 发送到服务器
+        this.sendWebSocketMessage('draw', element);
+        
+        // 更新起点坐标，实现连续擦除
+        this.startX = currentX;
+        this.startY = currentY;
+      } else if (this.currentTool === 'rectangle' || this.currentTool === 'circle' || this.currentTool === 'diamond' || this.currentTool === 'arrow') {
+        ......
+      }
+    },
+    stopDrawing() {
+      if (this.isDrawing) {
+        if (this.currentTool === 'pen' || this.currentTool === 'eraser') {
+          // 画笔和橡皮都已经在draw方法中逐段保存，不需要额外处理
+        } else if (this.currentTool === 'rectangle' || this.currentTool === 'circle' || this.currentTool === 'diamond' || this.currentTool === 'arrow') {
+          ......
+        }
+        this.isDrawing = false;
+      } else if (this.isAddingText) {
+        ......
+      }
+    },
+    ...
+  },
+  ...
+}
+```
+
+#### 图形绘制功能
+
+
+#### 文本绘制功能
+
+#### 颜色与大小
+这个其实是最简单的，其实在上面的代码中很容易注意到，各种内容绘制前都是会获取当前的颜色与大小进行绘制的，这里直接贴出我们怎么设置颜色与大小的代码：
+```js
+```
+### 实时协作白板共享实现
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+**单纯复制一份方便写文档，不用总是去翻源码**
+```js
+startDrawing(e) {
+      const rect = this.canvas.getBoundingClientRect();
+      this.startX = e.clientX - rect.left;
+      this.startY = e.clientY - rect.top;
+      this.lastX = this.startX;
+      this.lastY = this.startY;
+      
+      // 清空绘制点数组，准备收集新图形的点
+      this.drawingPoints = [{ x: this.startX, y: this.startY }];
+      
+      if (this.currentTool === 'text' || this.currentTool === 'mouse') {
+        // 检查是否点击了调整手柄
+        const resizeHandleSize = 8;
+        const handleX = this.textbox.x + this.textbox.width - resizeHandleSize / 2;
+        const handleY = this.textbox.y + this.textbox.height - resizeHandleSize / 2;
+        
+        if (this.isAddingText && 
+            this.startX >= handleX && 
+            this.startX <= handleX + resizeHandleSize && 
+            this.startY >= handleY && 
+            this.startY <= handleY + resizeHandleSize) {
+          // 开始调整文本框大小
+          this.textbox.isResizing = true;
+          this.textbox.isDragging = false;
+          this.textbox.resizeHandle = 'bottomRight';
+        } else if (this.isAddingText && 
+                   this.startX >= this.textbox.x && 
+                   this.startX <= this.textbox.x + this.textbox.width && 
+                   this.startY >= this.textbox.y && 
+                   this.startY <= this.textbox.y + this.textbox.height) {
+          // 开始拖动文本框
+          this.textbox.isDragging = true;
+          this.textbox.isResizing = false;
+          this.textbox.dragOffsetX = this.startX - this.textbox.x;
+          this.textbox.dragOffsetY = this.startY - this.textbox.y;
+        } else if (this.currentTool === 'text') {
+          // 开始创建文本框
+          this.isAddingText = true;
+          this.textbox.x = this.startX;
+          this.textbox.y = this.startY;
+          this.textbox.width = 200;
+          this.textbox.height = 100;
+          this.textbox.content = '';
+          this.textbox.fontSize = this.fontSize;
+          this.textbox.isResizing = false;
+          this.textbox.isDragging = false;
+          this.textbox.resizeHandle = null;
+        }
+      } else {
+        this.isDrawing = true;
+        // 为每一笔分配一个唯一的strokeId，使用socketId作为前缀
+        this.strokeId++;
+        this.currentStrokeId = `${this.socketId}_${this.strokeId}`;
+      }
+    },
+    draw(e) {
+      if (!this.isDrawing && !this.isAddingText) return;
+      
+      const rect = this.canvas.getBoundingClientRect();
+      const currentX = e.clientX - rect.left;
+      const currentY = e.clientY - rect.top;
+      
+      // 实时更新结束坐标
+      this.lastX = currentX;
+      this.lastY = currentY;
+      
+      if ((this.currentTool === 'text' || this.currentTool === 'mouse') && this.isAddingText) {
+        if (this.textbox.isDragging) {
+          // 拖动文本框
+          this.textbox.x = currentX - this.textbox.dragOffsetX;
+          this.textbox.y = currentY - this.textbox.dragOffsetY;
+        } else if (this.textbox.isResizing) {
+          // 调整文本框大小
+          this.textbox.width = Math.max(50, currentX - this.textbox.x);
+          this.textbox.height = Math.max(30, currentY - this.textbox.y);
+        } else {
+          // 创建文本框时调整大小
+          this.textbox.width = Math.max(50, currentX - this.textbox.x);
+          this.textbox.height = Math.max(30, currentY - this.textbox.y);
+        }
+        
+        // 清空画布并重新绘制所有元素
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        this.redrawElements();
+        
+        // 绘制文本框
+        this.ctx.strokeStyle = this.color;
+        this.ctx.lineWidth = this.lineWidth;
+        this.ctx.strokeRect(this.textbox.x, this.textbox.y, this.textbox.width, this.textbox.height);
+        
+        // 绘制调整手柄
+        const resizeHandleSize = 8;
+        this.ctx.fillStyle = this.color;
+        this.ctx.fillRect(
+          this.textbox.x + this.textbox.width - resizeHandleSize,
+          this.textbox.y + this.textbox.height - resizeHandleSize,
+          resizeHandleSize,
+          resizeHandleSize
+        );
+        
+        // 不再提前绘制文本内容，只在textarea中显示
+
+      } else if (this.currentTool === 'pen') {
+        this.ctx.strokeStyle = this.color;
+        this.ctx.lineWidth = this.lineWidth;
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.startX, this.startY);
+        this.ctx.lineTo(currentX, currentY);
+        this.ctx.stroke();
+        
+        // 保存画笔绘制的内容到elements数组
+        const element = {
+          type: 'pen',
+          startX: this.startX,
+          startY: this.startY,
+          lastX: currentX,
+          lastY: currentY,
+          color: this.color,
+          lineWidth: this.lineWidth,
+          strokeId: this.currentStrokeId
+        };
+        this.elements.push(element);
+        
+        // 收集绘制点用于图形识别
+        this.drawingPoints.push({ x: currentX, y: currentY });
+        
+        // 发送到服务器
+        this.sendWebSocketMessage('draw', element);
+        
+        // 更新起点坐标，实现连续绘制
+        this.startX = currentX;
+        this.startY = currentY;
+      } else if (this.currentTool === 'eraser') {
+        // 橡皮功能：绘制白色线条覆盖原有内容
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = this.lineWidth * 2; // 橡皮宽度是线条的2倍
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.startX, this.startY);
+        this.ctx.lineTo(currentX, currentY);
+        this.ctx.stroke();
+        
+        // 保存橡皮绘制的内容到elements数组
+        const element = {
+          type: 'eraser',
+          startX: this.startX,
+          startY: this.startY,
+          lastX: currentX,
+          lastY: currentY,
+          lineWidth: this.lineWidth * 2
+        };
+        this.elements.push(element);
+        
+        // 发送到服务器
+        this.sendWebSocketMessage('draw', element);
+        
+        // 更新起点坐标，实现连续擦除
+        this.startX = currentX;
+        this.startY = currentY;
+      } else if (this.currentTool === 'rectangle' || this.currentTool === 'circle' || this.currentTool === 'diamond' || this.currentTool === 'arrow') {
+        // 清空画布并重新绘制所有元素
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        this.redrawElements();
+        
+        // 绘制当前图形
+        this.ctx.strokeStyle = this.color;
+        this.ctx.lineWidth = this.lineWidth;
+        
+        if (this.currentTool === 'rectangle') {
+          this.ctx.beginPath();
+          this.ctx.rect(
+            Math.min(this.startX, currentX),
+            Math.min(this.startY, currentY),
+            Math.abs(currentX - this.startX),
+            Math.abs(currentY - this.startY)
+          );
+          this.ctx.stroke();
+        } else if (this.currentTool === 'circle') {
+          const radius = Math.sqrt(
+            Math.pow(currentX - this.startX, 2) + Math.pow(currentY - this.startY, 2)
+          );
+          this.ctx.beginPath();
+          this.ctx.arc(this.startX, this.startY, radius, 0, Math.PI * 2);
+          this.ctx.stroke();
+        } else if (this.currentTool === 'diamond') {
+          const centerX = (this.startX + currentX) / 2;
+          const centerY = (this.startY + currentY) / 2;
+          const width = Math.abs(currentX - this.startX) / 2;
+          const height = Math.abs(currentY - this.startY) / 2;
+          
+          this.ctx.beginPath();
+          this.ctx.moveTo(centerX, centerY - height);
+          this.ctx.lineTo(centerX + width, centerY);
+          this.ctx.lineTo(centerX, centerY + height);
+          this.ctx.lineTo(centerX - width, centerY);
+          this.ctx.closePath();
+          this.ctx.stroke();
+        } else if (this.currentTool === 'arrow') {
+          this.ctx.beginPath();
+          this.ctx.moveTo(this.startX, this.startY);
+          this.ctx.lineTo(currentX, currentY);
+          this.ctx.stroke();
+          // 绘制箭头
+          const angle = Math.atan2(currentY - this.startY, currentX - this.startX);
+          const arrowLength = 10;
+          this.ctx.beginPath();
+          this.ctx.moveTo(currentX, currentY);
+          this.ctx.lineTo(
+            currentX - arrowLength * Math.cos(angle - Math.PI / 6),
+            currentY - arrowLength * Math.sin(angle - Math.PI / 6)
+          );
+          this.ctx.moveTo(currentX, currentY);
+          this.ctx.lineTo(
+            currentX - arrowLength * Math.cos(angle + Math.PI / 6),
+            currentY - arrowLength * Math.sin(angle + Math.PI / 6)
+          );
+          this.ctx.stroke();
+        }
+      }
+    },
+    stopDrawing() {
+      if (this.isDrawing) {
+        if (this.currentTool === 'pen' || this.currentTool === 'eraser') {
+          // 画笔和橡皮都已经在draw方法中逐段保存，不需要额外处理
+        } else if (this.currentTool === 'rectangle' || this.currentTool === 'circle' || this.currentTool === 'diamond' || this.currentTool === 'arrow') {
+          // 保存图形元素
+          const element = {
+            type: this.currentTool,
+            startX: this.startX,
+            startY: this.startY,
+            lastX: this.lastX,
+            lastY: this.lastY,
+            color: this.color,
+            lineWidth: this.lineWidth
+          };
+          this.elements.push(element);
+          // 发送到服务器
+          this.sendWebSocketMessage('draw', element);
+          // 重新绘制所有元素
+          // 注意绘制矩形等图形因为生成预览图形并不是真实绘制，因此需要存入elements再使用redrawElements重绘；
+          this.ctx.clearRect(0, 0, this.width, this.height);
+          this.redrawElements();
+        }
+        this.isDrawing = false;
+      } else if (this.isAddingText) {
+        // 文本框创建、调整或拖动完成
+        if (this.textbox.isResizing) {
+          // 调整完成，重置调整状态
+          this.textbox.isResizing = false;
+          this.textbox.resizeHandle = null;
+        } else if (this.textbox.isDragging) {
+          // 拖动完成，重置拖动状态
+          this.textbox.isDragging = false;
+        }
+        
+        // 保持isAddingText为true，显示文本输入界面
+        // 重新绘制画布，显示文本框
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        this.redrawElements();
+        
+        // 绘制文本框
+        this.ctx.strokeStyle = this.color;
+        this.ctx.lineWidth = this.lineWidth;
+        this.ctx.strokeRect(this.textbox.x, this.textbox.y, this.textbox.width, this.textbox.height);
+        
+        // 绘制调整手柄
+        const resizeHandleSize = 8;
+        this.ctx.fillStyle = this.color;
+        this.ctx.fillRect(
+          this.textbox.x + this.textbox.width - resizeHandleSize,
+          this.textbox.y + this.textbox.height - resizeHandleSize,
+          resizeHandleSize,
+          resizeHandleSize
+        );
+      }
+    },
+```
+### 美化白板识别算法与撤回实现
+
+### websocket同步与撤回美化实现
+
+
 
 
 
