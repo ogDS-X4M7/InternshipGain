@@ -376,7 +376,7 @@ class MeetingRoomManager {
   }
 }
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ 服务启动: http://192.168.248.168:${PORT}`);
+  console.log(`✅ 服务启动: http://192.168.153.168:${PORT}`);
   setInterval(() => meetingRoomManager.cleanupEmptyRooms(), 5 * 60 * 1000);
 });
 ```
@@ -453,7 +453,7 @@ server.listen(PORT, '0.0.0.0', () => {
 
 可以看到判断确认是我们画笔/橡皮动作时，除了常规的设置一个绘制信号以外，还<span style="color:green">为每一笔分配一个唯一的strokeId，使用socketId作为前缀</span>，这么做也是为了后续识别笔画进行美化，<span style="color:green">**请注意这里的一笔是指一次绘制完成，即一次鼠标按下到抬起，不是lineTo的意思；同时这里使用独立的socketId来生成唯一的strokeId，(socket和stroke很像但是不一样哈)，是为了区分多个用户各自绘制的内容**</span>
 
-`draw`方法：和`startDrawing`方法类似，更新坐标，记录绘制图形点；<span style="color:green;">将绘制内容保存进入`elements`数组，这是后面也经常用到的数组，用于记录画板上绘制的所有内容，可以支持画板内容全部重绘，这是很重要的功能，能够支持很多操作</span>
+`draw`方法：根据开始坐标和当前坐标绘制线段，然后和`startDrawing`方法类似更新坐标(更新起始坐标实现连续绘制)，记录绘制图形点；<span style="color:green;">将绘制内容保存进入`elements`数组，这是后面也经常用到的数组，用于记录画板上绘制的所有内容，可以支持画板内容全部重绘，这是很重要的功能，能够支持很多操作([后面](#图形绘制功能)会讲到)</span>
 
 `stopDrawing`方法：画笔和橡皮都已经在draw方法中逐段保存，因此这里只需要重置绘制信号，设置为false即可；如果是其他图形可能会需要做重绘处理，就放在下面讲解啦
 ```js
@@ -577,14 +577,672 @@ export default {
 ```
 
 #### 图形绘制功能
+接下来我们来介绍下图形绘制功能，包括矩形、圆形、菱形、箭头：
 
+设计上是用户点击工具栏上的图形图标，然后在画布上绘制对应的图形。画布上点击确定图形开始位置，<span style="color: green;">拖动改变图形大小</span>，最后松开鼠标绘制完成。也就是确认位置，<span style="color: green;">最后预览确认大小</span>，最后绘制完成。
+
+代码层面，工具栏按钮部分已经在[上面代码](#画笔与橡皮功能)中展示过，这里不再重复；
+
+`startDrawing`方法：与上面画笔与橡皮功能没有差异，不再重复；
+
+`draw`方法：根据用户选择不同图形工具，进行不同的处理：这部分其实涉及到上面提到的预览，随着用户拖动鼠标，我们需要实时更新绘制图形大小，这实现的时候就需要高频重绘来支持，这个时候就体现上面记录画布元素的作用，有元素的坐标与大小信息，能够根据坐标与大小信息来支持重绘图形。
+
+```js
+draw(e) {
+  if (!this.isDrawing && !this.isAddingText) return;
+  
+  const rect = this.canvas.getBoundingClientRect();
+  const currentX = e.clientX - rect.left;
+  const currentY = e.clientY - rect.top;
+  
+  // 实时更新结束坐标
+  this.lastX = currentX;
+  this.lastY = currentY;
+  
+  if ((this.currentTool === 'text' || this.currentTool === 'mouse') && this.isAddingText) {
+    ......
+  } else if (this.currentTool === 'rectangle' || this.currentTool === 'circle' || this.currentTool === 'diamond' || this.currentTool === 'arrow') {
+    // 清空画布并重新绘制所有元素
+    this.ctx.clearRect(0, 0, this.width, this.height);
+    this.redrawElements();
+    
+    // 绘制当前图形
+    this.ctx.strokeStyle = this.color;
+    this.ctx.lineWidth = this.lineWidth;
+    
+    if (this.currentTool === 'rectangle') {
+      this.ctx.beginPath();
+      this.ctx.rect(
+        Math.min(this.startX, currentX),
+        Math.min(this.startY, currentY),
+        Math.abs(currentX - this.startX),
+        Math.abs(currentY - this.startY)
+      );
+      this.ctx.stroke();
+    } else if (this.currentTool === 'circle') {
+      const radius = Math.sqrt(
+        Math.pow(currentX - this.startX, 2) + Math.pow(currentY - this.startY, 2)
+      );
+      this.ctx.beginPath();
+      this.ctx.arc(this.startX, this.startY, radius, 0, Math.PI * 2);
+      this.ctx.stroke();
+    } else if (this.currentTool === 'diamond') {
+      const centerX = (this.startX + currentX) / 2;
+      const centerY = (this.startY + currentY) / 2;
+      const width = Math.abs(currentX - this.startX) / 2;
+      const height = Math.abs(currentY - this.startY) / 2;
+      
+      this.ctx.beginPath();
+      this.ctx.moveTo(centerX, centerY - height);
+      this.ctx.lineTo(centerX + width, centerY);
+      this.ctx.lineTo(centerX, centerY + height);
+      this.ctx.lineTo(centerX - width, centerY);
+      this.ctx.closePath();
+      this.ctx.stroke();
+    } else if (this.currentTool === 'arrow') {
+      this.ctx.beginPath();
+      this.ctx.moveTo(this.startX, this.startY);
+      this.ctx.lineTo(currentX, currentY);
+      this.ctx.stroke();
+      // 绘制箭头
+      const angle = Math.atan2(currentY - this.startY, currentX - this.startX);
+      const arrowLength = 10;
+      this.ctx.beginPath();
+      this.ctx.moveTo(currentX, currentY);
+      this.ctx.lineTo(
+        currentX - arrowLength * Math.cos(angle - Math.PI / 6),
+        currentY - arrowLength * Math.sin(angle - Math.PI / 6)
+      );
+      this.ctx.moveTo(currentX, currentY);
+      this.ctx.lineTo(
+        currentX - arrowLength * Math.cos(angle + Math.PI / 6),
+        currentY - arrowLength * Math.sin(angle + Math.PI / 6)
+      );
+      this.ctx.stroke();
+    }
+  }
+},
+```
+接下来得详细讲讲各个图形的绘制实现：
+
+**矩形**:
+
+使用rect方法绘制一个矩形，核心参数是左上角坐标和矩形的宽高；所需的信息很简单，用户点击开始的坐标，和当前用户光标所在坐标；但用户光标所在位置也可能比开始坐标更小，所以需要取最小值作为左上角坐标，宽高则是取二者之差的绝对值；
+```js
+if (this.currentTool === 'rectangle') {
+  this.ctx.beginPath();
+  this.ctx.rect(
+    Math.min(this.startX, currentX),
+    Math.min(this.startY, currentY),
+    Math.abs(currentX - this.startX),
+    Math.abs(currentY - this.startY)
+  );
+  this.ctx.stroke();
+}
+```
+
+**圆形**：
+
+使用arc方法绘制一个圆形，核心参数是圆心坐标和半径；我们以用户点击开始的坐标为圆心，计算当前用户光标所在坐标与起始坐标的距离，得到半径，绘制一个完整的圆；
+```js
+else if (this.currentTool === 'circle') {
+  const radius = Math.sqrt(
+    Math.pow(currentX - this.startX, 2) + Math.pow(currentY - this.startY, 2)
+  );
+  this.ctx.beginPath();
+  this.ctx.arc(this.startX, this.startY, radius, 0, Math.PI * 2);
+  this.ctx.stroke();
+}
+```
+
+**菱形**：
+
+使用lineTo方法绘制一个菱形，可以理解为和绘制矩形类似，取矩形四边中点为菱形顶点；计算图形中点，矩形宽高，基于中点计算四个顶点，使用lineTo方法绘制四个顶点的线段即可；
+```js
+else if (this.currentTool === 'diamond') {
+  const centerX = (this.startX + currentX) / 2;
+  const centerY = (this.startY + currentY) / 2;
+  const width = Math.abs(currentX - this.startX) / 2;
+  const height = Math.abs(currentY - this.startY) / 2;
+  
+  this.ctx.beginPath();
+  this.ctx.moveTo(centerX, centerY - height);
+  this.ctx.lineTo(centerX + width, centerY);
+  this.ctx.lineTo(centerX, centerY + height);
+  this.ctx.lineTo(centerX - width, centerY);
+  this.ctx.closePath();
+  this.ctx.stroke();
+}
+```
+
+**箭头**：
+
+首先绘制线段，然后根据线段方向绘制箭头，线段方向通过计算当前用户光标所在坐标与起始坐标的角度，得到线段方向：
+- Math.atan2(y, x) ：计算从原点到点(x, y)的角度，参数是 (终点Y - 起点Y, 终点X - 起点X)，返回值是弧度制，范围是[-π, π]
+
+箭头长度为10，箭头角度为60度(上下各30度)，理解计算方法也很简单，先假设不要这30度，那么计算移动长度10的线段，那么就是沿着原线段移动10个单位，x坐标当然就是currentX - arrowLength * Math.cos(angle)；y坐标当然就是currentY - arrowLength * Math.sin(angle)；那么箭头不过就是顺时针旋转30度，逆时针旋转30度的两个线段，所以+/- Math.PI / 6 就是箭头的角度；
+```js
+else if (this.currentTool === 'arrow') {
+  this.ctx.beginPath();
+  this.ctx.moveTo(this.startX, this.startY);
+  this.ctx.lineTo(currentX, currentY);
+  this.ctx.stroke();
+  // 绘制箭头
+  const angle = Math.atan2(currentY - this.startY, currentX - this.startX);
+  const arrowLength = 10;
+  this.ctx.beginPath();
+  this.ctx.moveTo(currentX, currentY);
+  this.ctx.lineTo(
+    currentX - arrowLength * Math.cos(angle - Math.PI / 6),
+    currentY - arrowLength * Math.sin(angle - Math.PI / 6)
+  );
+  this.ctx.moveTo(currentX, currentY);
+  this.ctx.lineTo(
+    currentX - arrowLength * Math.cos(angle + Math.PI / 6),
+    currentY - arrowLength * Math.sin(angle + Math.PI / 6)
+  );
+  this.ctx.stroke();
+}
+```
+
+
+
+`stopDrawing`方法：
+停止绘画，保存当前绘制元素到elements数组中，同时发送到服务器；draw中实现的预览效果其实停止也可以，但在这里重新绘制更贴合逻辑，所以清除画布，再绘制所有元素作为结束；
+```js
+stopDrawing() {
+  if (this.isDrawing) {
+    if (this.currentTool === 'pen' || this.currentTool === 'eraser') {
+      // 画笔和橡皮都已经在draw方法中逐段保存，不需要额外处理
+    } else if (this.currentTool === 'rectangle' || this.currentTool === 'circle' || this.currentTool === 'diamond' || this.currentTool === 'arrow') {
+      // 保存图形元素
+      const element = {
+        type: this.currentTool,
+        startX: this.startX,
+        startY: this.startY,
+        lastX: this.lastX,
+        lastY: this.lastY,
+        color: this.color,
+        lineWidth: this.lineWidth
+      };
+      this.elements.push(element);
+      // 发送到服务器
+      this.sendWebSocketMessage('draw', element);
+      // 重新绘制所有元素
+      // 注意绘制矩形等图形因为生成预览图形并不是真实绘制，因此需要存入elements再使用redrawElements重绘；
+      this.ctx.clearRect(0, 0, this.width, this.height);
+      this.redrawElements();
+    }
+    this.isDrawing = false;
+  } else if (this.isAddingText) {
+    // 文本框创建、调整或拖动完成
+    ......
+  }
+},
+```
 
 #### 文本绘制功能
+注意到在上面的代码展示中经常会看到文本绘制部分的判断逻辑，的确，因为项目中实现的文本绘制功能比较复杂，支持文本框创建，大小调整，字体大小调整等功能；因此需要和使用的判断逻辑会比较多；
+
+下面来看代码：
+
+**文本框的实际绘制**
+
+<span style="color: green">**有一个很重要的点是，canvas并不能绘制文本输入框，所以实际上文本框的绘制是基于textarea，我们在template中写好一个文本框，由信号控制显隐(反正不会同时存在两个文本框)；这里方法也只是在对文本框绑定的属性做初始化/更新，事实上的文本框绘制与canvas无关，canvas只是绘制一些矩形让文本框显示出来**</span>
+```js
+<div v-if="currentTool === 'text' && isAddingText" class="text-input-wrapper" :style="{ left: textbox.x + 'px', top: textbox.y + 'px' }">
+  <div class="text-input-container" :style="{ width: textbox.width + 'px', height: textbox.height + 'px' }">
+    <textarea 
+      ref="textInput" 
+      v-model="textbox.content" 
+      @input="updateTextPreview"
+      @keyup.enter="finishTextInput"
+      @blur="handleTextareaBlur"
+      placeholder="输入文本，按Enter键或点击确认按钮绘制"
+      :style="{ fontSize: textbox.fontSize + 'px' }"
+      rows="4"
+    />
+  </div>
+  <div class="text-input-button" style="pointer-events: auto;">
+    <button @click.stop="finishTextInput">确认</button>
+  </div>
+</div>
+```
+
+**三大方法——只是属性的动态调整**
+
+`startDrawing`方法：<span style="color: green">文本框属性初始化</span>；同样记录当前点击的坐标，准备收集新图形的点；如果没有其他信号，且当前工具是文本框，则开始创建文本框，进行初始化；(其实其他很多逻辑都是没有用的，因为实现文本框大小调整就足够了，拖拽那些可以说作废，直接看最后一个else if的逻辑即可)
+```js
+startDrawing(e) {
+  const rect = this.canvas.getBoundingClientRect();
+  this.startX = e.clientX - rect.left;
+  this.startY = e.clientY - rect.top;
+  this.lastX = this.startX;
+  this.lastY = this.startY;
+  
+  // 清空绘制点数组，准备收集新图形的点
+  this.drawingPoints = [{ x: this.startX, y: this.startY }];
+  
+  if (this.currentTool === 'text' || this.currentTool === 'mouse') {
+    // 检查是否点击了调整手柄
+    const resizeHandleSize = 8;
+    const handleX = this.textbox.x + this.textbox.width - resizeHandleSize / 2;
+    const handleY = this.textbox.y + this.textbox.height - resizeHandleSize / 2;
+    
+    if (this.isAddingText && 
+        this.startX >= handleX && 
+        this.startX <= handleX + resizeHandleSize && 
+        this.startY >= handleY && 
+        this.startY <= handleY + resizeHandleSize) {
+      // 开始调整文本框大小
+      this.textbox.isResizing = true;
+      this.textbox.isDragging = false;
+      this.textbox.resizeHandle = 'bottomRight';
+    } else if (this.isAddingText && 
+               this.startX >= this.textbox.x && 
+               this.startX <= this.textbox.x + this.textbox.width && 
+               this.startY >= this.textbox.y && 
+               this.startY <= this.textbox.y + this.textbox.height) {
+      // 开始拖动文本框
+      this.textbox.isDragging = true;
+      this.textbox.isResizing = false;
+      this.textbox.dragOffsetX = this.startX - this.textbox.x;
+      this.textbox.dragOffsetY = this.startY - this.textbox.y;
+    } else if (this.currentTool === 'text') {
+      // 开始创建文本框
+      this.isAddingText = true;
+      this.textbox.x = this.startX;
+      this.textbox.y = this.startY;
+      this.textbox.width = 200;
+      this.textbox.height = 100;
+      this.textbox.content = '';
+      this.textbox.fontSize = this.fontSize;
+      this.textbox.isResizing = false;
+      this.textbox.isDragging = false;
+      this.textbox.resizeHandle = null;
+    }
+  } else {
+    ......
+  }
+},
+```
+
+`draw`方法：鼠标移动，随之动态调整文本框大小，isDragging/isResizing的逻辑依旧可以直接忽视；直接看最后一个else即可，动态调整文本框大小，Math.max确保最小尺寸为50*30，调整预览过程依旧依靠重绘实现；
+```js
+draw() {
+  if (!this.isDrawing && !this.isAddingText) return;
+  
+  const rect = this.canvas.getBoundingClientRect();
+  const currentX = e.clientX - rect.left;
+  const currentY = e.clientY - rect.top;
+  
+  // 实时更新结束坐标
+  this.lastX = currentX;
+  this.lastY = currentY;
+  
+  if ((this.currentTool === 'text' || this.currentTool === 'mouse') && this.isAddingText) {
+    if (this.textbox.isDragging) {
+      // 拖动文本框
+      this.textbox.x = currentX - this.textbox.dragOffsetX;
+      this.textbox.y = currentY - this.textbox.dragOffsetY;
+    } else if (this.textbox.isResizing) {
+      // 调整文本框大小
+      this.textbox.width = Math.max(50, currentX - this.textbox.x);
+      this.textbox.height = Math.max(30, currentY - this.textbox.y);
+    } else {
+      // 创建文本框时调整大小
+      this.textbox.width = Math.max(50, currentX - this.textbox.x);
+      this.textbox.height = Math.max(30, currentY - this.textbox.y);
+    }
+    
+    // 清空画布并重新绘制所有元素
+    this.ctx.clearRect(0, 0, this.width, this.height);
+    this.redrawElements();
+    
+    // 绘制文本框
+    this.ctx.strokeStyle = this.color;
+    this.ctx.lineWidth = this.lineWidth;
+    this.ctx.strokeRect(this.textbox.x, this.textbox.y, this.textbox.width, this.textbox.height);
+    
+    // 绘制调整手柄
+    const resizeHandleSize = 8;
+    this.ctx.fillStyle = this.color;
+    this.ctx.fillRect(
+      this.textbox.x + this.textbox.width - resizeHandleSize,
+      this.textbox.y + this.textbox.height - resizeHandleSize,
+      resizeHandleSize,
+      resizeHandleSize
+    );
+    
+    // 不再提前绘制文本内容，只在textarea中显示
+  }
+  ......
+}
+```
+
+`stopDrawing`方法：鼠标松开，结束绘制，对于文本框而言抬起鼠标并没有什么影响，因为我们的设定是输入文字，enter/点击确认结束，这里的stopDrawing实际上不会结束draw方法对文本框的动态大小调整，因为这本身就只是文本框的一个中间阶段；
+```js
+stopDrawing() {
+  if (this.isDrawing) {
+    if (this.currentTool === 'pen' || this.currentTool === 'eraser') {
+      // 画笔和橡皮都已经在draw方法中逐段保存，不需要额外处理
+    } else if (this.currentTool === 'rectangle' || this.currentTool === 'circle' || this.currentTool === 'diamond' || this.currentTool === 'arrow') {
+      ......
+  } else if (this.isAddingText) {
+    // 文本框创建、调整或拖动完成
+    if (this.textbox.isResizing) {
+      // 调整完成，重置调整状态
+      this.textbox.isResizing = false;
+      this.textbox.resizeHandle = null;
+    } else if (this.textbox.isDragging) {
+      // 拖动完成，重置拖动状态
+      this.textbox.isDragging = false;
+    }
+    
+    // 保持isAddingText为true，显示文本输入界面
+    // 重新绘制画布，显示文本框
+    this.ctx.clearRect(0, 0, this.width, this.height);
+    this.redrawElements();
+    
+    // 绘制文本框
+    this.ctx.strokeStyle = this.color;
+    this.ctx.lineWidth = this.lineWidth;
+    this.ctx.strokeRect(this.textbox.x, this.textbox.y, this.textbox.width, this.textbox.height);
+    
+    // 绘制调整手柄
+    const resizeHandleSize = 8;
+    this.ctx.fillStyle = this.color;
+    this.ctx.fillRect(
+      this.textbox.x + this.textbox.width - resizeHandleSize,
+      this.textbox.y + this.textbox.height - resizeHandleSize,
+      resizeHandleSize,
+      resizeHandleSize
+    );
+  }
+},
+```
+
+**文本框功能逻辑的实现**
+
+<span style="color: green;">经过上面的解析，我们能很明确知道**startDrawing、draw、stopDrawing方法只是在对文本框的属性做一些初始化，动态调整，动态绘制的操作，文本框的实际实现是在template自己写，更多的逻辑也是在methods方法里编写**，接下来我们来讲解这些逻辑方法：</span>
+
+我们肯定知道文本框的功能逻辑是输入、确认、以及绘制到白板上要实现与预览效果一致(比如换行等)，它们可不是在那三个方法中去实现的，让我们来看代码：（最主要的是wrapText方法和finishTextInput方法）
+
+已经知道文本框输入文本内容是基于textarea实现，所以输入更新的逻辑我们不需要关心，这里的`updateTextPreview`方法，实际上什么也没做；
+
+`wrapText`方法：实现文本换行，这是非常重要核心的方法，根据文本框宽度和字体大小，将文本内容按单词或字符换行，返回换行后的文本数组。
+
+`cancelTextInput`方法：取消文本输入，清空文本框，关闭，重绘。
+
+`handleTextareaBlur`方法：当textarea失去焦点时，如果是点击确认按钮则不做特殊处理，否则执行`cancelTextInput`方法。
+
+`finishTextInput`方法：确认文本输入，保存进入`elements`数组，触发重绘(因为进入了elements数组，所以这次重绘才是真正将文本内容绘制到白板上)；
+
+```js
+updateTextPreview() {
+  // 实时更新画布上的文本预览
+  this.ctx.clearRect(0, 0, this.width, this.height);
+  this.redrawElements();
+  
+  // 绘制文本框
+  this.ctx.strokeStyle = this.color;
+  this.ctx.lineWidth = this.lineWidth;
+  this.ctx.strokeRect(this.textbox.x, this.textbox.y, this.textbox.width, this.textbox.height);
+  
+  // 绘制调整手柄
+  const resizeHandleSize = 8;
+  this.ctx.fillStyle = this.color;
+  this.ctx.fillRect(
+    this.textbox.x + this.textbox.width - resizeHandleSize,
+    this.textbox.y + this.textbox.height - resizeHandleSize,
+    resizeHandleSize,
+    resizeHandleSize
+  );
+  
+  // 不再提前绘制文本内容，只在textarea中显示
+},
+wrapText(text, maxWidth, fontSize) {
+  const lines = [];
+  
+  this.ctx.font = `${fontSize}px Arial`;
+  
+  // 检查文本框是否非常窄，需要垂直排列
+  const singleCharWidth = this.ctx.measureText('A').width;
+  if (maxWidth < singleCharWidth * 2) {
+    // 文本框非常窄，每个字符单独占一行
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] !== ' ') {
+        lines.push(text[i]);
+      }
+    }
+    return lines;
+  }
+  
+  // 正常情况，按单词换行
+  let currentLine = '';
+  const words = text.split(' ');
+  
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    // 检查单个单词是否已经超过最大宽度
+    const wordWidth = this.ctx.measureText(word).width;
+    if (wordWidth > maxWidth) {
+      // 单个单词超过最大宽度，需要按字符换行
+      let currentWordLine = '';
+      for (let j = 0; j < word.length; j++) {
+        const char = word[j];
+        const testLine = currentWordLine + char;
+        const testWidth = this.ctx.measureText(testLine).width;
+        if (testWidth <= maxWidth) {
+          currentWordLine = testLine;
+        } else {
+          if (currentWordLine) {
+            lines.push(currentWordLine);
+          }
+          currentWordLine = char;
+        }
+      }
+      if (currentWordLine) {
+        lines.push(currentWordLine);
+      }
+    } else {
+      // 单个单词未超过最大宽度，按单词换行
+      const testLine = currentLine + (currentLine ? ' ' : '') + word;
+      const testWidth = this.ctx.measureText(testLine).width;
+      
+      if (testWidth <= maxWidth) {
+        currentLine = testLine;
+      } else {
+        if (currentLine) {
+          lines.push(currentLine);
+        }
+        currentLine = word;
+      }
+    }
+  }
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  return lines;
+},
+cancelTextInput() {
+  this.isAddingText = false;
+  this.textbox.content = '';
+  // 清空画布并重新绘制所有元素，隐藏文本框
+  this.ctx.clearRect(0, 0, this.width, this.height);
+  this.redrawElements();
+},
+handleTextareaBlur(event) {
+  // 检查是否是因为点击确认按钮而导致的blur事件
+  const target = event.relatedTarget;
+  if (target && target.closest && target.closest('.text-input-button')) {
+    // 点击了确认按钮，不执行取消操作
+    return;
+  }
+  // 其他情况，执行取消操作
+  this.cancelTextInput();
+},
+finishTextInput() {
+  if (this.textbox.content) {
+    // 保存文本到elements数组
+    const element = {
+      type: 'text',
+      x: this.textbox.x,
+      y: this.textbox.y,
+      width: this.textbox.width,
+      height: this.textbox.height,
+      text: this.textbox.content,
+      color: this.color,
+      fontSize: this.textbox.fontSize
+    };
+    this.elements.push(element);
+    
+    // 发送到服务器
+    this.sendWebSocketMessage('text', element);
+    
+    // 添加到转录历史
+    this.transcriptionHistory.push(this.textbox.content);
+  }
+  this.isAddingText = false;
+  this.textbox.content = '';
+  // 清空画布并重新绘制所有元素，隐藏文本框
+  this.ctx.clearRect(0, 0, this.width, this.height);
+  this.redrawElements();
+},
+```
+
+finishTextInput方法的核心其实也是触发重绘，而wrapText方法则负责实现文本换行，这个方法实际上就是在重绘中才触发的，因此我们在最后这里再对这部分内容进行详解：
+
+**wrapText详解**：
+
+首先上来处理了一个情况(测试中遇到过)，当文本框特别窄(比如用户希望每个字符都占一行，就有可能出现)，如果不做这部分判断，会出现直接一行显示的情况，没有任何换行效果；因此上来就检测，如果文本框非常窄，就直接按字符换行输出即可；
+
+接下来将文本处理，分割为单词，进行单词换行；遍历单词数组，判断当前单词是否超过最大宽度，如果超过最大宽度，就按字符换行(如果当前行有内容，则先打印当前行，清空当前行，再进行字符换行)
+
+(字符换行：即遍历单词字符尝试进入当前行，直到超过最大宽度，就打印当前行，清空当前行，然后将当前字符作为下一行开头)：
+
+如果不超过最大宽度，就按单词换行(尝试把单词添加到当前行后比较当前行宽度是否超过最大宽度，如果超过最大宽度，之前的内容进入lines换行，当前单词成为下一行开头；不超过则继续当前行，进入下一个单词；)；
+
+通过上面的单词换行，字符换行，我们得到一个按行排列的文本数组，将它返回出去；
+```js
+wrapText(text, maxWidth, fontSize) {
+  const lines = [];
+  
+  this.ctx.font = `${fontSize}px Arial`;
+  
+  // 检查文本框是否非常窄，需要垂直排列
+  const singleCharWidth = this.ctx.measureText('A').width;
+  if (maxWidth < singleCharWidth * 2) {
+    // 文本框非常窄，每个字符单独占一行
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] !== ' ') {
+        lines.push(text[i]);
+      }
+    }
+    return lines;
+  }
+  
+  // 正常情况，按单词换行
+  let currentLine = '';
+  const words = text.split(' ');
+  
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    // 检查单个单词是否已经超过最大宽度
+    const wordWidth = this.ctx.measureText(word).width;
+    if (wordWidth > maxWidth) {
+      // 单个单词超过最大宽度，需要按字符换行
+      // 如果前面有单词，直接打印前面的单词，当前字符成为下一行开头
+      if (currentLine) {
+        lines.push(currentLine);
+        currentLine = '';
+      }
+      
+      let currentWordLine = '';
+      for (let j = 0; j < word.length; j++) {
+        const char = word[j];
+        const testLine = currentWordLine + char;
+        const testWidth = this.ctx.measureText(testLine).width;
+        if (testWidth <= maxWidth) {
+          currentWordLine = testLine;
+        } else {
+          if (currentWordLine) {
+            lines.push(currentWordLine);
+          }
+          currentWordLine = char;
+        }
+      }
+      if (currentWordLine) {
+        lines.push(currentWordLine);
+      }
+    } else {
+      // 单个单词未超过最大宽度，按单词换行
+      const testLine = currentLine + (currentLine ? ' ' : '') + word;
+      const testWidth = this.ctx.measureText(testLine).width;
+      
+      if (testWidth <= maxWidth) {
+        currentLine = testLine;
+      } else {
+        if (currentLine) {
+          lines.push(currentLine);
+        }
+        currentLine = word;
+      }
+    }
+  }
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  return lines;
+},
+```
+
+**绘制文本**
+在内容添加到elements数组中，重绘将会把文本内容绘制到白板上，这个过程中会调用上面讲的wrapText方法，对文本进行换行处理，得到按行排列的文本数组；然后绘制：
+
+绘制时，通过element元素收集的起点坐标(x,y)，计算每一行文本，并根据这个坐标来绘制文本；
+```js
+redrawElements() {
+  this.elements.forEach(element => {
+    if (element.type === 'eraser') {
+      ......
+    } else {
+      this.ctx.strokeStyle = element.color;
+      this.ctx.lineWidth = element.lineWidth;
+      
+      if (element.type === 'pen') {
+        ......
+      } else if (element.type === 'text') {
+        this.ctx.fillStyle = element.color;
+        // 使用element.fontSize作为字体大小，如果没有则使用默认值16
+        const fontSize = element.fontSize || 16;
+        this.ctx.font = `${fontSize}px Arial`;
+        
+        // 处理多行文本，考虑文本框宽度自动换行
+        const lines = this.wrapText(element.text, element.width - 20, fontSize);
+        const lineHeight = fontSize * 1.2;
+        lines.forEach((line, index) => {
+          this.ctx.fillText(line, element.x + 10, element.y + 30 + index * lineHeight);
+        });
+      }
+    }
+  });
+},
+```
 
 #### 颜色与大小
-这个其实是最简单的，其实在上面的代码中很容易注意到，各种内容绘制前都是会获取当前的颜色与大小进行绘制的，这里直接贴出我们怎么设置颜色与大小的代码：
+这个其实是最简单的，其实在上面的代码中很容易注意到，各种内容绘制前都是会获取当前的颜色与大小进行绘制的，这里直接贴出我们怎么设置颜色与大小的代码：通过input的type可以很轻松地实现，结合vue的v-model绑定就完成了；
 ```js
+<input type="color" v-model="color" />
+<span>笔画粗细:</span>
+<input type="range" v-model="lineWidth" min="1" max="10" />
+<span>{{ lineWidth }}px</span>
+<span>字体大小:</span>
+<input type="range" v-model="fontSize" min="8" max="48" />
+<span>{{ fontSize }}px</span>
 ```
+
+
 ### 实时协作白板共享实现
 
 
