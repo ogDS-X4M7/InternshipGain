@@ -453,6 +453,7 @@ server.listen(PORT, '0.0.0.0', () => {
 
 可以看到判断确认是我们画笔/橡皮动作时，除了常规的设置一个绘制信号以外，还<span style="color:green">为每一笔分配一个唯一的strokeId，使用socketId作为前缀</span>，这么做也是为了后续识别笔画进行美化，<span style="color:green">**请注意这里的一笔是指一次绘制完成，即一次鼠标按下到抬起，不是lineTo的意思；同时这里使用独立的socketId来生成唯一的strokeId，(socket和stroke很像但是不一样哈)，是为了区分多个用户各自绘制的内容**</span>
 
+<a id="flag"></a>
 `draw`方法：根据开始坐标和当前坐标绘制线段，然后和`startDrawing`方法类似更新坐标(更新起始坐标实现连续绘制)，记录绘制图形点；<span style="color:green;">将绘制内容保存进入`elements`数组，这是后面也经常用到的数组，用于记录画板上绘制的所有内容，可以支持画板内容全部重绘，这是很重要的功能，能够支持很多操作([后面](#图形绘制功能)会讲到)</span>
 
 `stopDrawing`方法：画笔和橡皮都已经在draw方法中逐段保存，因此这里只需要重置绘制信号，设置为false即可；如果是其他图形可能会需要做重绘处理，就放在下面讲解啦
@@ -1245,319 +1246,200 @@ redrawElements() {
 
 ### 实时协作白板共享实现
 
+已经讲完白板基础功能的实现，也讲过websocket的通信使用，现在来讲讲我们的白板信息，以及用户在白板上进行的各种操作都是如何在会议中通信传递的：
 
+通信的过程很简单：发送方记录操作并发送，服务器接受并广播，接收方解析操作并执行；下面我们根据这三个过程来讲解白板操作的共享实现：
 
+#### 发送操作
+先来讲讲操作信息，其实所谓的<span style="color: green;">操作信息</span>就是白板上新增了什么内容，我们记录下来，这能够帮助我们传递信息，执行重绘，美化等操作，说到这里其实就很明显了，<span style="color: green;">就是elements中的记录</span>；我们每执行一次操作，就会记录下操作信息，同时就可以发送出去；
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-**单纯复制一份方便写文档，不用总是去翻源码**
+将操作信息发送到服务器的动作其实在上面的代码中已经经常调用了，就是sendWebSocketMessage：比如绘制线段，使用橡皮擦，在draw方法中一段一段保存的，就在draw方法中保存element进入elements数组中，同时发送到服务器；
 ```js
-startDrawing(e) {
-      const rect = this.canvas.getBoundingClientRect();
-      this.startX = e.clientX - rect.left;
-      this.startY = e.clientY - rect.top;
-      this.lastX = this.startX;
-      this.lastY = this.startY;
-      
-      // 清空绘制点数组，准备收集新图形的点
-      this.drawingPoints = [{ x: this.startX, y: this.startY }];
-      
-      if (this.currentTool === 'text' || this.currentTool === 'mouse') {
-        // 检查是否点击了调整手柄
-        const resizeHandleSize = 8;
-        const handleX = this.textbox.x + this.textbox.width - resizeHandleSize / 2;
-        const handleY = this.textbox.y + this.textbox.height - resizeHandleSize / 2;
-        
-        if (this.isAddingText && 
-            this.startX >= handleX && 
-            this.startX <= handleX + resizeHandleSize && 
-            this.startY >= handleY && 
-            this.startY <= handleY + resizeHandleSize) {
-          // 开始调整文本框大小
-          this.textbox.isResizing = true;
-          this.textbox.isDragging = false;
-          this.textbox.resizeHandle = 'bottomRight';
-        } else if (this.isAddingText && 
-                   this.startX >= this.textbox.x && 
-                   this.startX <= this.textbox.x + this.textbox.width && 
-                   this.startY >= this.textbox.y && 
-                   this.startY <= this.textbox.y + this.textbox.height) {
-          // 开始拖动文本框
-          this.textbox.isDragging = true;
-          this.textbox.isResizing = false;
-          this.textbox.dragOffsetX = this.startX - this.textbox.x;
-          this.textbox.dragOffsetY = this.startY - this.textbox.y;
-        } else if (this.currentTool === 'text') {
-          // 开始创建文本框
-          this.isAddingText = true;
-          this.textbox.x = this.startX;
-          this.textbox.y = this.startY;
-          this.textbox.width = 200;
-          this.textbox.height = 100;
-          this.textbox.content = '';
-          this.textbox.fontSize = this.fontSize;
-          this.textbox.isResizing = false;
-          this.textbox.isDragging = false;
-          this.textbox.resizeHandle = null;
-        }
-      } else {
-        this.isDrawing = true;
-        // 为每一笔分配一个唯一的strokeId，使用socketId作为前缀
-        this.strokeId++;
-        this.currentStrokeId = `${this.socketId}_${this.strokeId}`;
-      }
-    },
-    draw(e) {
-      if (!this.isDrawing && !this.isAddingText) return;
-      
-      const rect = this.canvas.getBoundingClientRect();
-      const currentX = e.clientX - rect.left;
-      const currentY = e.clientY - rect.top;
-      
-      // 实时更新结束坐标
-      this.lastX = currentX;
-      this.lastY = currentY;
-      
-      if ((this.currentTool === 'text' || this.currentTool === 'mouse') && this.isAddingText) {
-        if (this.textbox.isDragging) {
-          // 拖动文本框
-          this.textbox.x = currentX - this.textbox.dragOffsetX;
-          this.textbox.y = currentY - this.textbox.dragOffsetY;
-        } else if (this.textbox.isResizing) {
-          // 调整文本框大小
-          this.textbox.width = Math.max(50, currentX - this.textbox.x);
-          this.textbox.height = Math.max(30, currentY - this.textbox.y);
-        } else {
-          // 创建文本框时调整大小
-          this.textbox.width = Math.max(50, currentX - this.textbox.x);
-          this.textbox.height = Math.max(30, currentY - this.textbox.y);
-        }
-        
-        // 清空画布并重新绘制所有元素
-        this.ctx.clearRect(0, 0, this.width, this.height);
-        this.redrawElements();
-        
-        // 绘制文本框
-        this.ctx.strokeStyle = this.color;
-        this.ctx.lineWidth = this.lineWidth;
-        this.ctx.strokeRect(this.textbox.x, this.textbox.y, this.textbox.width, this.textbox.height);
-        
-        // 绘制调整手柄
-        const resizeHandleSize = 8;
-        this.ctx.fillStyle = this.color;
-        this.ctx.fillRect(
-          this.textbox.x + this.textbox.width - resizeHandleSize,
-          this.textbox.y + this.textbox.height - resizeHandleSize,
-          resizeHandleSize,
-          resizeHandleSize
-        );
-        
-        // 不再提前绘制文本内容，只在textarea中显示
-
-      } else if (this.currentTool === 'pen') {
-        this.ctx.strokeStyle = this.color;
-        this.ctx.lineWidth = this.lineWidth;
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.startX, this.startY);
-        this.ctx.lineTo(currentX, currentY);
-        this.ctx.stroke();
-        
-        // 保存画笔绘制的内容到elements数组
-        const element = {
-          type: 'pen',
-          startX: this.startX,
-          startY: this.startY,
-          lastX: currentX,
-          lastY: currentY,
-          color: this.color,
-          lineWidth: this.lineWidth,
-          strokeId: this.currentStrokeId
-        };
-        this.elements.push(element);
-        
-        // 收集绘制点用于图形识别
-        this.drawingPoints.push({ x: currentX, y: currentY });
-        
-        // 发送到服务器
-        this.sendWebSocketMessage('draw', element);
-        
-        // 更新起点坐标，实现连续绘制
-        this.startX = currentX;
-        this.startY = currentY;
-      } else if (this.currentTool === 'eraser') {
-        // 橡皮功能：绘制白色线条覆盖原有内容
-        this.ctx.strokeStyle = '#ffffff';
-        this.ctx.lineWidth = this.lineWidth * 2; // 橡皮宽度是线条的2倍
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.startX, this.startY);
-        this.ctx.lineTo(currentX, currentY);
-        this.ctx.stroke();
-        
-        // 保存橡皮绘制的内容到elements数组
-        const element = {
-          type: 'eraser',
-          startX: this.startX,
-          startY: this.startY,
-          lastX: currentX,
-          lastY: currentY,
-          lineWidth: this.lineWidth * 2
-        };
-        this.elements.push(element);
-        
-        // 发送到服务器
-        this.sendWebSocketMessage('draw', element);
-        
-        // 更新起点坐标，实现连续擦除
-        this.startX = currentX;
-        this.startY = currentY;
-      } else if (this.currentTool === 'rectangle' || this.currentTool === 'circle' || this.currentTool === 'diamond' || this.currentTool === 'arrow') {
-        // 清空画布并重新绘制所有元素
-        this.ctx.clearRect(0, 0, this.width, this.height);
-        this.redrawElements();
-        
-        // 绘制当前图形
-        this.ctx.strokeStyle = this.color;
-        this.ctx.lineWidth = this.lineWidth;
-        
-        if (this.currentTool === 'rectangle') {
-          this.ctx.beginPath();
-          this.ctx.rect(
-            Math.min(this.startX, currentX),
-            Math.min(this.startY, currentY),
-            Math.abs(currentX - this.startX),
-            Math.abs(currentY - this.startY)
-          );
-          this.ctx.stroke();
-        } else if (this.currentTool === 'circle') {
-          const radius = Math.sqrt(
-            Math.pow(currentX - this.startX, 2) + Math.pow(currentY - this.startY, 2)
-          );
-          this.ctx.beginPath();
-          this.ctx.arc(this.startX, this.startY, radius, 0, Math.PI * 2);
-          this.ctx.stroke();
-        } else if (this.currentTool === 'diamond') {
-          const centerX = (this.startX + currentX) / 2;
-          const centerY = (this.startY + currentY) / 2;
-          const width = Math.abs(currentX - this.startX) / 2;
-          const height = Math.abs(currentY - this.startY) / 2;
-          
-          this.ctx.beginPath();
-          this.ctx.moveTo(centerX, centerY - height);
-          this.ctx.lineTo(centerX + width, centerY);
-          this.ctx.lineTo(centerX, centerY + height);
-          this.ctx.lineTo(centerX - width, centerY);
-          this.ctx.closePath();
-          this.ctx.stroke();
-        } else if (this.currentTool === 'arrow') {
-          this.ctx.beginPath();
-          this.ctx.moveTo(this.startX, this.startY);
-          this.ctx.lineTo(currentX, currentY);
-          this.ctx.stroke();
-          // 绘制箭头
-          const angle = Math.atan2(currentY - this.startY, currentX - this.startX);
-          const arrowLength = 10;
-          this.ctx.beginPath();
-          this.ctx.moveTo(currentX, currentY);
-          this.ctx.lineTo(
-            currentX - arrowLength * Math.cos(angle - Math.PI / 6),
-            currentY - arrowLength * Math.sin(angle - Math.PI / 6)
-          );
-          this.ctx.moveTo(currentX, currentY);
-          this.ctx.lineTo(
-            currentX - arrowLength * Math.cos(angle + Math.PI / 6),
-            currentY - arrowLength * Math.sin(angle + Math.PI / 6)
-          );
-          this.ctx.stroke();
-        }
-      }
-    },
-    stopDrawing() {
-      if (this.isDrawing) {
-        if (this.currentTool === 'pen' || this.currentTool === 'eraser') {
-          // 画笔和橡皮都已经在draw方法中逐段保存，不需要额外处理
-        } else if (this.currentTool === 'rectangle' || this.currentTool === 'circle' || this.currentTool === 'diamond' || this.currentTool === 'arrow') {
-          // 保存图形元素
-          const element = {
-            type: this.currentTool,
-            startX: this.startX,
-            startY: this.startY,
-            lastX: this.lastX,
-            lastY: this.lastY,
-            color: this.color,
-            lineWidth: this.lineWidth
-          };
-          this.elements.push(element);
-          // 发送到服务器
-          this.sendWebSocketMessage('draw', element);
-          // 重新绘制所有元素
-          // 注意绘制矩形等图形因为生成预览图形并不是真实绘制，因此需要存入elements再使用redrawElements重绘；
-          this.ctx.clearRect(0, 0, this.width, this.height);
-          this.redrawElements();
-        }
-        this.isDrawing = false;
-      } else if (this.isAddingText) {
-        // 文本框创建、调整或拖动完成
-        if (this.textbox.isResizing) {
-          // 调整完成，重置调整状态
-          this.textbox.isResizing = false;
-          this.textbox.resizeHandle = null;
-        } else if (this.textbox.isDragging) {
-          // 拖动完成，重置拖动状态
-          this.textbox.isDragging = false;
-        }
-        
-        // 保持isAddingText为true，显示文本输入界面
-        // 重新绘制画布，显示文本框
-        this.ctx.clearRect(0, 0, this.width, this.height);
-        this.redrawElements();
-        
-        // 绘制文本框
-        this.ctx.strokeStyle = this.color;
-        this.ctx.lineWidth = this.lineWidth;
-        this.ctx.strokeRect(this.textbox.x, this.textbox.y, this.textbox.width, this.textbox.height);
-        
-        // 绘制调整手柄
-        const resizeHandleSize = 8;
-        this.ctx.fillStyle = this.color;
-        this.ctx.fillRect(
-          this.textbox.x + this.textbox.width - resizeHandleSize,
-          this.textbox.y + this.textbox.height - resizeHandleSize,
-          resizeHandleSize,
-          resizeHandleSize
-        );
-      }
-    },
+const element = {
+  type: this.currentTool,
+  startX: this.startX,
+  startY: this.startY,
+  lastX: this.lastX,
+  lastY: this.lastY,
+  color: this.color,
+  lineWidth: this.lineWidth
+};
+this.elements.push(element);
+// 发送到服务器
+this.sendWebSocketMessage('draw', element);
 ```
+同样的，绘制图形，则是在图形预览完毕，用户确认绘制时，存入elements数组中，同时发送到服务器；那么它的发送阶段就是在`stopDrawing`方法中；
+
+绘制文本，是要在用户`enter`确认或点击确认键后，才完成彻底输入，才存入elements数组中，同时发送到服务器；那么它的发送逻辑就要写进`finishTextInput`方法中了；
+
+这些代码在对应功能的讲解中其实都有，这里就只简单贴了绘制线段的代码；毕竟核心不在于刚刚讲的如何记录和发送时机，这些也都是之前具体讲解代码中有的，核心是发送方法的实现：
+
+```js
+export default {
+  ......
+  methods: {
+    ......
+    sendWebSocketMessage(type, data) {
+      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+        console.log(`Sending WebSocket message: ${type}, data length: ${JSON.stringify(data).length}`);
+        this.socket.send(JSON.stringify({ type, data }));
+      } else {
+        console.error('WebSocket not open, readyState:', this.socket ? this.socket.readyState : 'null');
+      }
+    },
+    ......
+  },
+  ......
+}
+```
+可以看到并不复杂，就是判断下websocket是否打开，如果是，就发送消息，将type和data打包成json字符串发送，告知接收方操作类型和数据；如果不是，就报错；
+
+#### 服务器接收并广播
+从上面的发送操作我们可以知道是通过websocket发送消息的，那么服务器当然是通过websocket去接收，从逻辑上我们很容易了解到，服务器在这里只是起一个中转站，将收到的消息广播给其他用户的作用，因此它的逻辑并不复杂；
+
+```js
+wss.on('connection', (ws, req, roomCode) => {
+  ......
+  ws.on('message', (data, isBinary) => {
+    try {
+      if (isBinary) {
+        ......
+        return;
+      }
+      const parsed = JSON.parse(data.toString());
+      if (parsed.type === 'draw') {
+        const s = meetingRoomManager.getCanvasState(roomCode);
+        s.push(parsed.data);
+        meetingRoomManager.updateCanvasState(roomCode, s);
+        meetingRoomManager.broadcastToRoom(roomCode, JSON.stringify({
+          type: 'draw',
+          data: parsed.data
+        }), ws.id);
+      }
+      if (parsed.type === 'text') {
+        const s = meetingRoomManager.getCanvasState(roomCode);
+        s.push(parsed.data);
+        meetingRoomManager.updateCanvasState(roomCode, s);
+        meetingRoomManager.broadcastToRoom(roomCode, JSON.stringify({
+          type: 'text',
+          data: parsed.data
+        }), ws.id);
+      }
+      if (parsed.type === 'clear') {
+        meetingRoomManager.updateCanvasState(roomCode, []);
+        meetingRoomManager.broadcastToRoom(roomCode, JSON.stringify({
+          type: 'clear'
+        }), ws.id);
+      }
+      ......
+    } catch (e) { }
+  });
+  ......
+})
+```
+可以看到，服务器会根据获取到的data的type判断消息类型，将它们存入服务器端的canvasState中，然后广播接收到的消息；那么让我们来讲讲这里的核心，`broadcastToRoom`方法：
+```js
+class MeetingRoomManager {
+  ......
+  broadcastToRoom(code, msg, excludeId) {
+    const room = this.rooms.get(code);
+    if (!room) return;
+    room.members.forEach(m => {
+      if (m.socketId !== excludeId) {
+        const ws = clients.find(c => c.id === m.socketId);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(msg);
+        }
+      }
+    });
+  }
+}
+```
+可以看到非常简单，因为服务器端存放有参会用户的socketId，所以只需要遍历所有参会用户，除了当前发送消息的用户，其他都获取socketId，找到对应的websocket，如果存在且打开，就发送消息即可；
+
+至于前面讲到服务器会把消息数据存入canvasState中的原因，这其实在之前基础功能讲到过，就是当有新用户加入会议室，新用户是需要获取之前的白板信息的，这不可能通过其他用户来发送，在服务器端存储一份，并在新用户加入时，直接发送给新用户是最好的方案，因此服务器也需要存储并实时更新一份canvasState；
+
+在这里我们也把获取canvasState，以及更新updateCanvasState方法的代码贴出来：并没有什么难度，只是一个简单的数组；
+```js
+class MeetingRoomManager {
+  ......
+  updateCanvasState(code, state) {
+    const room = this.rooms.get(code);
+    if (room) {
+      room.canvasState = state;
+      room.lastActivityTime = new Date();
+    }
+  }
+  getCanvasState(code) {
+    return this.rooms.get(code)?.canvasState || [];
+  }
+  ......
+}
+```
+#### 用户接收端接收并处理
+服务器广播后，其他用户会收到信息，并处理，绘制到他们的白板上，让我们来看具体实现：
+```js
+export default {
+  ......
+  methods: {
+    ......
+    setupWebSocket() {
+      try {
+        // 使用传入的roomCode建立WebSocket连接
+        ......
+        this.socket.onmessage = (event) => {
+          try {
+            // 检查是否是二进制数据（音频数据）
+            if (event.data instanceof ArrayBuffer) {
+              ......
+              return;
+            }
+            
+            console.log(`收到WebSocket消息: ${event.data}`);
+            const data = JSON.parse(event.data);
+            if (data.type === 'canvasState') {
+              console.log(`收到canvasState消息，元素数量: ${data.data.length}`);
+              this.elements = data.data;
+              this.redrawCanvas();
+              console.log(`canvasState消息已处理`);
+            } else if (data.type === 'draw') {
+              console.log(`收到draw消息: ${data.data}`);
+              this.elements.push(data.data);
+              this.redrawCanvas();
+            } else if (data.type === 'text') {
+              console.log(`收到text消息: ${data.data}`);
+              this.elements.push(data.data);
+              this.redrawCanvas();
+            } else if (data.type === 'clear') {
+              console.log(`收到clear消息`);
+              this.elements = [];
+              this.ctx.clearRect(0, 0, this.width, this.height);
+            } else if (data.type === 'beautify') {
+              ......
+            } ......
+          } catch (error) {
+            console.error(`处理WebSocket消息时出错: ${error}`);
+          }
+        };
+      } catch (error) {
+        console.error(`设置WebSocket连接时出错: ${error}`);
+      }
+    },
+    ......
+  },
+  ......
+}
+```
+可以看到这里的操作也并不复杂，只需要根据消息类型判断，存储进入用户的elements数组中，依靠重绘功能，就能绘制到白板上；可以看到很多地方都是依靠重绘功能实现的，和[之前所说一样，重绘功能的确是非常重要的功能](#flag)
+
 ### 美化白板识别算法与撤回实现
 
 ### websocket同步与撤回美化实现
 
 
-
+**单纯复制一份方便写文档，不用总是去翻源码**
+```js
+```
 
 
 ## 语音转写与会议摘要功能
@@ -1570,11 +1452,3 @@ startDrawing(e) {
   - 从会议中提取重要信息，生成会议摘要
   - 调用大模型进行会议摘要，处理返回文本结果
   - 可视化展示
-
-
-
-
-
-
-
-### 实时协作白板功能
