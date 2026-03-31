@@ -1901,7 +1901,7 @@
 <span class="line">  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token punctuation">}</span><span class="token punctuation">)</span></span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>可以看到通过strokeId来判断最新美化操作是否是当前用户的，不是则驳回，是则执行撤销美化操作，通过以前存储的originalState来实现撤销(更新canvasState)，随后广播发送canvasState消息，通知其他用户更新画布。</p>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>可以看到通过strokeId来判断最新美化操作是否是当前用户的，不是则驳回，是则执行撤销美化操作，通过以前存储的originalState来实现撤销(更新canvasState)，随后广播发送canvasState消息，通知其他用户更新画布。至于使用的方法<a href="#%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%8E%A5%E6%94%B6%E5%B9%B6%E5%B9%BF%E6%92%AD">之前</a>已经讲过,不再赘述。</p>
 <h2 id="语音转写与会议摘要功能" tabindex="-1"><a class="header-anchor" href="#语音转写与会议摘要功能"><span>语音转写与会议摘要功能</span></a></h2>
 <p>这部分都是结合ai大模型实现，会讲解如何调用大模型，以及传递给大模型前的各种参数处理操作；</p>
 <ul>
@@ -1920,6 +1920,273 @@
 </ul>
 </li>
 </ul>
-</div></template>
+<p>接下来让我们慢慢讲解：</p>
+<h3 id="语音转写功能" tabindex="-1"><a class="header-anchor" href="#语音转写功能"><span>语音转写功能</span></a></h3>
+<p>这部分内容的代码量比较大，而且之前我对这方面的知识并不熟悉，这里按序慢慢讲解：</p>
+<p>首先把获取用户语音输入的代码放出来：</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">async</span> <span class="token function">startRecording</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">  <span class="token keyword">try</span> <span class="token punctuation">{</span></span>
+<span class="line">    <span class="token comment">// 检查浏览器是否支持媒体设备API</span></span>
+<span class="line">    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>navigator<span class="token punctuation">.</span>mediaDevices <span class="token operator">||</span> <span class="token operator">!</span>navigator<span class="token punctuation">.</span>mediaDevices<span class="token punctuation">.</span>getUserMedia<span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">      <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name">Error</span><span class="token punctuation">(</span><span class="token string">'浏览器不支持媒体设备API'</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    <span class="token punctuation">}</span></span>
+<span class="line">    <span class="token comment">// 请求16kHz采样率的音频流</span></span>
+<span class="line">    <span class="token keyword">const</span> stream <span class="token operator">=</span> <span class="token keyword">await</span> navigator<span class="token punctuation">.</span>mediaDevices<span class="token punctuation">.</span><span class="token function">getUserMedia</span><span class="token punctuation">(</span><span class="token punctuation">{</span> </span>
+<span class="line">      <span class="token literal-property property">audio</span><span class="token operator">:</span> <span class="token punctuation">{</span></span>
+<span class="line">        <span class="token literal-property property">sampleRate</span><span class="token operator">:</span> <span class="token number">16000</span><span class="token punctuation">,</span></span>
+<span class="line">        <span class="token literal-property property">channelCount</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span></span>
+<span class="line">        <span class="token literal-property property">sampleSize</span><span class="token operator">:</span> <span class="token number">16</span></span>
+<span class="line">      <span class="token punctuation">}</span></span>
+<span class="line">    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    </span>
+<span class="line">    <span class="token comment">// 创建音频上下文，设置采样率为16kHz</span></span>
+<span class="line">    <span class="token keyword">const</span> audioContext <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token punctuation">(</span>window<span class="token punctuation">.</span>AudioContext <span class="token operator">||</span> window<span class="token punctuation">.</span>webkitAudioContext<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">{</span></span>
+<span class="line">      <span class="token literal-property property">sampleRate</span><span class="token operator">:</span> <span class="token number">16000</span></span>
+<span class="line">    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    <span class="token keyword">const</span> source <span class="token operator">=</span> audioContext<span class="token punctuation">.</span><span class="token function">createMediaStreamSource</span><span class="token punctuation">(</span>stream<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    </span>
+<span class="line">    <span class="token comment">// 创建脚本处理器，用于获取音频数据</span></span>
+<span class="line">    <span class="token comment">// 16kHz采样率，缓冲区大小设置为1024（最接近640的2的幂）</span></span>
+<span class="line">    <span class="token keyword">const</span> processor <span class="token operator">=</span> audioContext<span class="token punctuation">.</span><span class="token function">createScriptProcessor</span><span class="token punctuation">(</span><span class="token number">1024</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    </span>
+<span class="line">    <span class="token comment">// 发送开始转写的消息</span></span>
+<span class="line">    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">sendWebSocketMessage</span><span class="token punctuation">(</span><span class="token string">'startTranscription'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    </span>
+<span class="line">    <span class="token comment">// 音频数据缓冲区</span></span>
+<span class="line">    <span class="token keyword">let</span> audioBuffer <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span></span>
+<span class="line">    </span>
+<span class="line">    <span class="token comment">// 处理音频数据</span></span>
+<span class="line">    processor<span class="token punctuation">.</span><span class="token function-variable function">onaudioprocess</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter">event</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">{</span></span>
+<span class="line">      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>isRecording<span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">        <span class="token keyword">const</span> inputData <span class="token operator">=</span> event<span class="token punctuation">.</span>inputBuffer<span class="token punctuation">.</span><span class="token function">getChannelData</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token comment">// 转换为16位PCM格式</span></span>
+<span class="line">        <span class="token keyword">const</span> pcmData <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">float32ToInt16</span><span class="token punctuation">(</span>inputData<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token comment">// 将音频数据添加到缓冲区</span></span>
+<span class="line">        audioBuffer<span class="token punctuation">.</span><span class="token function">push</span><span class="token punctuation">(</span>pcmData<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">      <span class="token punctuation">}</span></span>
+<span class="line">    <span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line">    </span>
+<span class="line">    <span class="token comment">// 每400ms发送一次音频数据</span></span>
+<span class="line">    <span class="token keyword">const</span> sendInterval <span class="token operator">=</span> <span class="token function">setInterval</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">{</span></span>
+<span class="line">      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>isRecording <span class="token operator">&amp;&amp;</span> audioBuffer<span class="token punctuation">.</span>length <span class="token operator">></span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> <span class="token keyword">this</span><span class="token punctuation">.</span>socket <span class="token operator">&amp;&amp;</span> <span class="token keyword">this</span><span class="token punctuation">.</span>socket<span class="token punctuation">.</span>readyState <span class="token operator">===</span> WebSocket<span class="token punctuation">.</span><span class="token constant">OPEN</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">        <span class="token comment">// 合并缓冲区中的音频数据</span></span>
+<span class="line">        <span class="token keyword">const</span> mergedData <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Int16Array</span><span class="token punctuation">(</span>audioBuffer<span class="token punctuation">.</span><span class="token function">reduce</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">total<span class="token punctuation">,</span> buffer</span><span class="token punctuation">)</span> <span class="token operator">=></span> total <span class="token operator">+</span> buffer<span class="token punctuation">.</span>length<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token keyword">let</span> offset <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span></span>
+<span class="line">        audioBuffer<span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span><span class="token parameter">buffer</span> <span class="token operator">=></span> <span class="token punctuation">{</span></span>
+<span class="line">          mergedData<span class="token punctuation">.</span><span class="token function">set</span><span class="token punctuation">(</span>buffer<span class="token punctuation">,</span> offset<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">          offset <span class="token operator">+=</span> buffer<span class="token punctuation">.</span>length<span class="token punctuation">;</span></span>
+<span class="line">        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">        </span>
+<span class="line">        <span class="token comment">// 发送音频数据到服务器</span></span>
+<span class="line">        <span class="token keyword">this</span><span class="token punctuation">.</span>socket<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>mergedData<span class="token punctuation">.</span>buffer<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">        </span>
+<span class="line">        <span class="token comment">// 清空缓冲区</span></span>
+<span class="line">        audioBuffer <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span></span>
+<span class="line">      <span class="token punctuation">}</span></span>
+<span class="line">    <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">400</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    </span>
+<span class="line">    <span class="token comment">// 保存定时器ID，用于停止录音时清除</span></span>
+<span class="line">    <span class="token keyword">this</span><span class="token punctuation">.</span>sendInterval <span class="token operator">=</span> sendInterval<span class="token punctuation">;</span></span>
+<span class="line">    </span>
+<span class="line">    <span class="token comment">// 连接音频节点</span></span>
+<span class="line">    source<span class="token punctuation">.</span><span class="token function">connect</span><span class="token punctuation">(</span>processor<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    processor<span class="token punctuation">.</span><span class="token function">connect</span><span class="token punctuation">(</span>audioContext<span class="token punctuation">.</span>destination<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    </span>
+<span class="line">    <span class="token keyword">this</span><span class="token punctuation">.</span>isRecording <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span></span>
+<span class="line">    <span class="token keyword">this</span><span class="token punctuation">.</span>audioContext <span class="token operator">=</span> audioContext<span class="token punctuation">;</span></span>
+<span class="line">    <span class="token keyword">this</span><span class="token punctuation">.</span>processor <span class="token operator">=</span> processor<span class="token punctuation">;</span></span>
+<span class="line">    <span class="token keyword">this</span><span class="token punctuation">.</span>stream <span class="token operator">=</span> stream<span class="token punctuation">;</span></span>
+<span class="line">    </span>
+<span class="line">    <span class="token comment">// 启动缓冲区处理定时器，每3秒检查一次</span></span>
+<span class="line">    <span class="token keyword">this</span><span class="token punctuation">.</span>bufferTimer <span class="token operator">=</span> <span class="token function">setInterval</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">{</span></span>
+<span class="line">      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">mergeTranscriptionResults</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">3000</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    </span>
+<span class="line">    console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">'开始录音'</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">'启动转录缓冲区处理定时器'</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    </span>
+<span class="line">  <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">    console<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">'录音失败:'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">showToastMessage</span><span class="token punctuation">(</span><span class="token string">'录音失败，请检查麦克风权限'</span><span class="token punctuation">,</span> <span class="token string">'error'</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">  <span class="token punctuation">}</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">,</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>可以看到这些功能基本都是通过浏览器的媒体设备API来实现的，包括获取用户语音输入、处理音频数据、调用大模型进行语音转写、处理返回文本结果、实现字幕功能等。这些api对我来说比较陌生，让我们逐个讲解：</p>
+<h4 id="音频api讲解" tabindex="-1"><a class="header-anchor" href="#音频api讲解"><span>音频api讲解</span></a></h4>
+<p><strong>navigator.mediaDevices.getUserMedia</strong>:</p>
+<p>来看mdn的文档介绍：</p>
+<p><code v-pre>MediaDevices.getUserMedia() 会提示用户给予使用媒体输入的许可，媒体输入会产生一个MediaStream，里面包含了请求的媒体类型的轨道。此流可以包含一个视频轨道（来自硬件或者虚拟视频源，比如相机、视频采集设备和屏幕共享服务等等）、一个音频轨道（同样来自硬件或虚拟音频源，比如麦克风、A/D 转换器等等），也可能是其他轨道类型。</code></p>
+<p><code v-pre>它返回一个 Promise 对象，成功后会resolve回调一个 MediaStream 对象。若用户拒绝了使用权限，或者需要的媒体源不可用，promise会reject回调一个 PermissionDeniedError 或者 NotFoundError 。</code></p>
+<p>navigator.mediaDevices.getUserMedia 是一个 Web API，用于 请求用户授权访问媒体设备 （如摄像头和麦克风）。它是 WebRTC（Web Real-Time Communication）技术的一部分，主要用于在浏览器中获取实时媒体流。</p>
+<p>基本功能</p>
+<ul>
+<li>获取媒体流 ：访问用户的摄像头和/或麦克风</li>
+<li>用户授权 ：自动弹出权限请求，需要用户手动允许</li>
+<li>返回Promise ：成功时返回 MediaStream 对象，失败时返回错误</li>
+<li>实时数据 ：获取的是实时的媒体流数据</li>
+</ul>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token comment">// 请求16kHz采样率的音频流</span></span>
+<span class="line"><span class="token keyword">const</span> stream <span class="token operator">=</span> <span class="token keyword">await</span> navigator<span class="token punctuation">.</span>mediaDevices<span class="token punctuation">.</span><span class="token function">getUserMedia</span><span class="token punctuation">(</span><span class="token punctuation">{</span> </span>
+<span class="line">  <span class="token literal-property property">audio</span><span class="token operator">:</span> <span class="token punctuation">{</span></span>
+<span class="line">    <span class="token literal-property property">sampleRate</span><span class="token operator">:</span> <span class="token number">16000</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token literal-property property">channelCount</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token literal-property property">sampleSize</span><span class="token operator">:</span> <span class="token number">16</span></span>
+<span class="line">  <span class="token punctuation">}</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>这里配置的参数与我们的音频转写有关:</p>
+<p><code v-pre>sampleRate</code>: 音频采样率，单位是Hz（赫兹）,是语音识别的标准采样率，表示每秒采集的音频样本数，大多数语音转写服务（如讯飞API）都要求这个采样率</p>
+<p><code v-pre>channelCount</code>: 音频通道数，示音频是单声道(1)还是立体声(2),语音识别只需要单声道数据，单声道数据量是立体声的一半，传输更高效，大多数语音转写服务只处理单声道音频</p>
+<p><code v-pre>sampleSize</code>: 音频采样位深度，单位是位(bit)，表示每个音频样本的精度。16位是语音识别的标准位深度，提供足够的动态范围（约96dB）来捕捉语音细节，与大多数语音转写服务的要求一致</p>
+<p><strong>window.AudioContext与createMediaStreamSource</strong></p>
+<p>window.AudioContext ：Web Audio API 的核心对象，用于处理和分析音频数据(window.webkitAudioContext是适配浏览器的兼容性写法)</p>
+<p>createMediaStreamSource(stream) ：将之前获取的媒体流（ stream ）转换为 AudioContext 可处理的音频源节点（音频源节点是音频处理链路的起点）</p>
+<p>createScriptProcessor：创建脚本处理器，实时获取、处理音频数据，可以分析、进行数据转换 ：通过回调函数实时访问音频缓冲区中的数据，还可以对音频数据进行自定义处理；可以分析音频的频率、振幅等特性，也能将音频数据转换为适合传输的格式。<span style="color:green;">注意：createScriptProcessor其实已经弃用，被 AudioWorklet 和 AudioWorkletNode 接口替代。如果未来还有应用场景，替换掉</span></p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token comment">// 创建音频上下文，设置采样率为16kHz</span></span>
+<span class="line"><span class="token keyword">const</span> audioContext <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token punctuation">(</span>window<span class="token punctuation">.</span>AudioContext <span class="token operator">||</span> window<span class="token punctuation">.</span>webkitAudioContext<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">{</span></span>
+<span class="line">  <span class="token literal-property property">sampleRate</span><span class="token operator">:</span> <span class="token number">16000</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token keyword">const</span> source <span class="token operator">=</span> audioContext<span class="token punctuation">.</span><span class="token function">createMediaStreamSource</span><span class="token punctuation">(</span>stream<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token comment">// 创建脚本处理器，用于获取音频数据</span></span>
+<span class="line"><span class="token comment">// 16kHz采样率，缓冲区大小设置为1024（最接近640的2的幂）</span></span>
+<span class="line"><span class="token keyword">const</span> processor <span class="token operator">=</span> audioContext<span class="token punctuation">.</span><span class="token function">createScriptProcessor</span><span class="token punctuation">(</span><span class="token number">1024</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p><code v-pre>sampleRate</code>: 设置音频上下文的采样率，与之前getUserMedia的设置（16kHz采样率）保持一致</p>
+<p><code v-pre>createScriptProcessor</code>的参数：</p>
+<ul>
+<li>1024 ：缓冲区大小（单位：样本数），表示每次处理的音频样本数量，选择1024是因为它是最接近640的2的幂(采样率为16000Hz时，640个样本对应的时长是：640 ÷ 16000 = 0.04秒（40毫秒），40毫秒是语音处理的一个常见帧长，既能保证实时性，又能提供足够的语音信息)，缓冲区大小会影响音频处理的延迟和性能</li>
+<li>1 ：输入声道数，与之前设置的单声道保持一致</li>
+<li>1 ：输出声道数，保持与输入声道数一致</li>
+</ul>
+<p><strong>processor.onaudioprocess</strong></p>
+<p>这部分代码临时存储采集到的音频数据，等待后续处理和发送，因为并不是每次采集完就要发送出去，缓存后再发效果可能更好；</p>
+<p>processor.onaudioprocess：音频处理器回调函数设置，这个回调函数每当音频缓冲区填满时触发（约每1024个样本触发一次）</p>
+<p>event.inputBuffer.getChannelData(0) ：获取第0声道（单声道）的音频数据</p>
+<p>float32ToInt16(inputData) ：将32位浮点音频数据转换为16位PCM格式(具体实现在下面的代码中)</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token comment">// 音频数据缓冲区</span></span>
+<span class="line"><span class="token keyword">let</span> audioBuffer <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token comment">// 处理音频数据</span></span>
+<span class="line">processor<span class="token punctuation">.</span><span class="token function-variable function">onaudioprocess</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter">event</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">{</span></span>
+<span class="line">  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>isRecording<span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">    <span class="token keyword">const</span> inputData <span class="token operator">=</span> event<span class="token punctuation">.</span>inputBuffer<span class="token punctuation">.</span><span class="token function">getChannelData</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    <span class="token comment">// 转换为16位PCM格式</span></span>
+<span class="line">    <span class="token keyword">const</span> pcmData <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">float32ToInt16</span><span class="token punctuation">(</span>inputData<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    <span class="token comment">// 将音频数据添加到缓冲区</span></span>
+<span class="line">    audioBuffer<span class="token punctuation">.</span><span class="token function">push</span><span class="token punctuation">(</span>pcmData<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">  <span class="token punctuation">}</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">;</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>之所以会有float32ToInt16函数，是因为：</p>
+<ul>
+<li>Web Audio API 采集的原始音频数据是 32位浮点格式 （范围：-1.0 到 1.0）</li>
+<li>语音识别API 通常要求 16位PCM格式 （范围：-32768 到 32767）</li>
+</ul>
+<p>PCM (Pulse Code Modulation) 脉冲编码调制，是一种将模拟信号转换为数字信号的方法：</p>
+<ol>
+<li>16位 ：表示每个音频样本用16位二进制数表示
+<ul>
+<li>范围：-32768 到 32767（2^15 = 32768）</li>
+<li>分辨率：能够表示65536个不同的音频幅度级别</li>
+<li>动态范围：约96分贝（每增加1位，动态范围增加6分贝）</li>
+</ul>
+</li>
+<li>PCM格式的特点 ：
+<ul>
+<li>无损编码：直接存储音频样本值，没有压缩</li>
+<li>广泛支持：几乎所有音频设备和API都支持</li>
+<li>标准格式：语音识别API通常要求使用16位PCM格式</li>
+</ul>
+</li>
+</ol>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token function">float32ToInt16</span><span class="token punctuation">(</span><span class="token parameter">buffer</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">  <span class="token keyword">const</span> length <span class="token operator">=</span> buffer<span class="token punctuation">.</span>length<span class="token punctuation">;</span></span>
+<span class="line">  <span class="token keyword">const</span> result <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Int16Array</span><span class="token punctuation">(</span>length<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">let</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> length<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">    <span class="token keyword">const</span> s <span class="token operator">=</span> Math<span class="token punctuation">.</span><span class="token function">max</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">,</span> Math<span class="token punctuation">.</span><span class="token function">min</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> buffer<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    result<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> s <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">?</span> s <span class="token operator">*</span> <span class="token number">0x8000</span> <span class="token operator">:</span> s <span class="token operator">*</span> <span class="token number">0x7FFF</span><span class="token punctuation">;</span></span>
+<span class="line">  <span class="token punctuation">}</span></span>
+<span class="line">  <span class="token keyword">return</span> result<span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">,</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>const result = new Int16Array(length); 创建一个整数数组(用于存储转换后的16位PCM格式的数据)
+const s = Math.max(-1, Math.min(1, buffer[i])); 确保值在-1到1之间
+负数处理 ： s &lt; 0 ? s * 0x8000</p>
+<ul>
+<li>0x8000是32768的十六进制表示</li>
+<li>负数乘以32768得到-32768到0之间的值</li>
+<li>正数处理 ： s * 0x7FFF
+<ul>
+<li>0x7FFF是32767的十六进制表示</li>
+<li>正数乘以32767得到0到32767之间的值</li>
+</ul>
+</li>
+</ul>
+<p><strong>下次接着写，这里讲到发送数据到服务器了，然后就是服务器再去请求大模型得到转写结果，websocket的onmessage接收服务器获取结果存入转录缓冲区，然后就对应上这里mergeTranscriptionResults函数操作转录缓冲区了</strong></p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token comment">// 每400ms发送一次音频数据</span></span>
+<span class="line"><span class="token keyword">const</span> sendInterval <span class="token operator">=</span> <span class="token function">setInterval</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">{</span></span>
+<span class="line">  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>isRecording <span class="token operator">&amp;&amp;</span> audioBuffer<span class="token punctuation">.</span>length <span class="token operator">></span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> <span class="token keyword">this</span><span class="token punctuation">.</span>socket <span class="token operator">&amp;&amp;</span> <span class="token keyword">this</span><span class="token punctuation">.</span>socket<span class="token punctuation">.</span>readyState <span class="token operator">===</span> WebSocket<span class="token punctuation">.</span><span class="token constant">OPEN</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">    <span class="token comment">// 合并缓冲区中的音频数据</span></span>
+<span class="line">    <span class="token keyword">const</span> mergedData <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Int16Array</span><span class="token punctuation">(</span>audioBuffer<span class="token punctuation">.</span><span class="token function">reduce</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">total<span class="token punctuation">,</span> buffer</span><span class="token punctuation">)</span> <span class="token operator">=></span> total <span class="token operator">+</span> buffer<span class="token punctuation">.</span>length<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    <span class="token keyword">let</span> offset <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span></span>
+<span class="line">    audioBuffer<span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span><span class="token parameter">buffer</span> <span class="token operator">=></span> <span class="token punctuation">{</span></span>
+<span class="line">      mergedData<span class="token punctuation">.</span><span class="token function">set</span><span class="token punctuation">(</span>buffer<span class="token punctuation">,</span> offset<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">      offset <span class="token operator">+=</span> buffer<span class="token punctuation">.</span>length<span class="token punctuation">;</span></span>
+<span class="line">    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    </span>
+<span class="line">    <span class="token comment">// 发送音频数据到服务器</span></span>
+<span class="line">    <span class="token keyword">this</span><span class="token punctuation">.</span>socket<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>mergedData<span class="token punctuation">.</span>buffer<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    </span>
+<span class="line">    <span class="token comment">// 清空缓冲区</span></span>
+<span class="line">    audioBuffer <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span></span>
+<span class="line">  <span class="token punctuation">}</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">400</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token function">stopRecording</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>isRecording<span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">        <span class="token comment">// 发送停止转写的消息</span></span>
+<span class="line">        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">sendWebSocketMessage</span><span class="token punctuation">(</span><span class="token string">'stopTranscription'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">        </span>
+<span class="line">        <span class="token comment">// 清除发送定时器</span></span>
+<span class="line">        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>sendInterval<span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">          <span class="token function">clearInterval</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>sendInterval<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">          <span class="token keyword">this</span><span class="token punctuation">.</span>sendInterval <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token punctuation">}</span></span>
+<span class="line">        </span>
+<span class="line">        <span class="token comment">// 关闭音频处理</span></span>
+<span class="line">        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>processor<span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">          <span class="token keyword">this</span><span class="token punctuation">.</span>processor<span class="token punctuation">.</span><span class="token function">disconnect</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">          <span class="token keyword">this</span><span class="token punctuation">.</span>processor <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token punctuation">}</span></span>
+<span class="line">        </span>
+<span class="line">        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>stream<span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">          <span class="token keyword">this</span><span class="token punctuation">.</span>stream<span class="token punctuation">.</span><span class="token function">getTracks</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span><span class="token parameter">track</span> <span class="token operator">=></span> track<span class="token punctuation">.</span><span class="token function">stop</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">          <span class="token keyword">this</span><span class="token punctuation">.</span>stream <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token punctuation">}</span></span>
+<span class="line">        </span>
+<span class="line">        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>audioContext<span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">          <span class="token keyword">this</span><span class="token punctuation">.</span>audioContext<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">          <span class="token keyword">this</span><span class="token punctuation">.</span>audioContext <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token punctuation">}</span></span>
+<span class="line">        </span>
+<span class="line">        <span class="token keyword">this</span><span class="token punctuation">.</span>isRecording <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span></span>
+<span class="line">        </span>
+<span class="line">        <span class="token comment">// 清除缓冲区处理定时器</span></span>
+<span class="line">        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>bufferTimer<span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">          <span class="token function">clearInterval</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>bufferTimer<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">          <span class="token keyword">this</span><span class="token punctuation">.</span>bufferTimer <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span></span>
+<span class="line">          console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">'停止转录缓冲区处理定时器'</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token punctuation">}</span></span>
+<span class="line">        </span>
+<span class="line">        <span class="token comment">// 最后一次合并转录结果</span></span>
+<span class="line">        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">mergeTranscriptionResults</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">        </span>
+<span class="line">        console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">'停止录音'</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">        </span>
+<span class="line">      <span class="token punctuation">}</span></span>
+<span class="line">    <span class="token punctuation">}</span><span class="token punctuation">,</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div></div></template>
 
 
