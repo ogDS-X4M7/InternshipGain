@@ -1435,7 +1435,7 @@ export default {
 ### 美化白板识别算法
 接下来让我们来讲讲美化白板识别算法；识别算法主要在后端实现；前端负责发送手绘信息，接受后端返回的美化图形，并对原图形进行替换；
 
-#### 美化白板前端实现(美化图形信息收集与替换)
+#### 美化白板前端实现——图形信息收集与替换
 前端方面，绑定按钮，用户点击美化按钮后调用方法beautifyShape，实现美化功能；
 
 **首先检测用户是否绘制了一个图形，（至少3个点），如果没有绘制，就提示用户绘制一个图形；**
@@ -1547,7 +1547,7 @@ app.post('/api/recognize-shape', (req, res) => {
 1. 计算图形的基本属性，如中心点、边界框、面积、周长、长宽比等。
 2. 基于几何特征识别图形，通过调整识别图形算法的阈值，来提高识别的准确率，同时调整识别的顺序，放在前面识别的图形，比如圆，矩形，算法设计时就会提高识别的精度，增加识别手段，提高准确度，避免识别为其他图形。
 3. 对识别后的图形进行美化，比如调整颜色、宽度等，来符合用户的绘制意图。
-
+<a id="recognizeShape"></a>
 ```js
 recognizeShape(points) {
   try {
@@ -1564,17 +1564,16 @@ recognizeShape(points) {
       const centerX = boundingBox.x + boundingBox.width / 2;
       const centerY = boundingBox.y + boundingBox.height / 2;
 
-      // 计算所有点到中心点的最大距离，作为半径
-      let maxDistance = 0;
-      for (const point of points) {
-        const distance = Math.sqrt(Math.pow(point.x - centerX, 2) + Math.pow(point.y - centerY, 2));
-        if (distance > maxDistance) {
-          maxDistance = distance;
-        }
-      }
+      // // 计算所有点到中心点的平均距离，作为半径
+      // let totalDistance = 0;
+      // for (const point of points) {
+      //   const distance = Math.sqrt(Math.pow(point.x - centerX, 2) + Math.pow(point.y - centerY, 2));
+      //   totalDistance += distance;
+      // }
 
-      // 使用最大距离作为半径，确保美化后的圆形大小与用户绘制的一致
-      const radius = maxDistance;
+      // // 使用平均距离作为半径，确保美化后的圆形大小与用户绘制的一致
+      // const radius = totalDistance / points.length;
+      const radius = boundingBox.width / 2;
       return {
         type: 'circle',
         center: { x: centerX, y: centerY },
@@ -1623,7 +1622,7 @@ recognizeShape(points) {
   }
 }
 ```
-可以看到，<span style="color: green;">这里大部分的逻辑都是根据图形基本属性进行了美化调整，这里贴出来主要是提供一个框架去帮助我们按顺序理解代码，只需要看大概框架，不需要看具体逻辑，逻辑我们放在最后讲；</span>识别和美化都需要先计算图形的基本属性，所以让我们来先看看这些属性计算方法是如何实现的，才能更好理解识别图形的逻辑：
+可以看到，<span style="color: green;">这里大部分的逻辑都是根据图形基本属性进行了美化调整，这里贴出来主要是提供一个框架去帮助我们按顺序理解代码，只需要看大概框架，不需要看具体逻辑，逻辑是很简单的。可以最后再回来看，甚至不需要专门讲解；</span>识别和美化都需要先计算图形的基本属性，所以让我们来先看看这些属性计算方法是如何实现的，才能更好理解识别图形的逻辑：
 
 <span style="color: green;">**计算图形的基本属性**</span>
 
@@ -1858,6 +1857,8 @@ distanceToLine(point, lineStart, lineEnd) {
 ```
 可以看到箭头识别的逻辑用到了点到直线的距离，用于判断点是否靠近起点-终点连线。求出了所有点到起点-终点连线的平均距离，起点到终点连线距离(即箭头的直线部分)，平均距离远小于直线部分，就认为是箭头。
 
+这些识别逻辑了解完了，现在可以回去[上面](#recognizeShape)看看美化逻辑了，实际上非常简单，看两眼就知道，只是根据点的坐标外加识别出来的图形提供了预期的格式，不需要讲解了。
+
 
 **beautifyShape的实现：(格式调整)**
 可以看到美化图形的方法是根据美化后返回的图形信息，按照前端调整格式，返回调整后的图形信息。
@@ -1905,12 +1906,170 @@ beautifyShape(shape) {
 
 
 ### websocket同步与撤回美化实现
+上面的代码讲完了后端美化算法的实现，前端怎么发送信息和接收美化后的信息以及对应的处理也已经讲完。接下来我们要讲讲各用户之间是如何实现同步与撤回美化功能的。因为这些美化信息还需要同步；其实有了前后端通信，以及前面的websocket通信内容，不难想到还是美化操作前后端通信时实现的“存放入elements数组”的操作，增加一个广播来实现；其他用户端的处理逻辑和美化请求用户的处理逻辑相同，接收到服务端发送来的对应处理逻辑，做替换操作即可；
 
+不过光这么说还是不够，让我们来看实际实现：(我们依旧按照前端实现和后端实现来讲)
 
-**单纯复制一份方便写文档，不用总是去翻源码**
+#### 前端实现
+前端部分，我们需要讲：
+- 美化后各个接收客户端处理美化信息操作的实现；
+- 撤回美化的请求客户端需要实现的内容(请求发送，本地处理)；
+- 撤回美化后的各个接收客户端处理操作的实现；
+
+让我们来看代码实现：
 ```js
+setupWebSocket() {
+  try {
+    // 使用传入的roomCode建立WebSocket连接
+    console.log(`与会议室${this.roomCode}建立WebSocket连接`);
+    this.socket = new WebSocket(`ws://192.168.153.168:8080?roomCode=${this.roomCode}`);
+    
+    this.socket.onopen = () => {
+      console.log(`与会议室${this.roomCode}的WebSocket连接成功，readyState: ${this.socket.readyState}`);
+      // 发送昵称信息到服务器
+      this.sendWebSocketMessage('updateNickname', { nickname: this.nickname });
+    };
+    
+    this.socket.onmessage = (event) => {
+      try {
+        // 检查是否是二进制数据（音频数据）
+          ......
+          return;
+        }
+        
+        console.log(`收到WebSocket消息: ${event.data}`);
+        const data = JSON.parse(event.data);
+        if (data.type === 'canvasState') {
+          console.log(`收到canvasState消息，元素数量: ${data.data.length}`);
+          this.elements = data.data;
+          this.redrawCanvas();
+          console.log(`canvasState消息已处理`);
+        } else if (data.type === 'draw') {
+          ......
+        } else if (data.type === 'beautify') {
+          console.log(`收到beautify消息: ${data.data}`);
+          // 处理来自服务器的美化操作
+          const { strokeId, newElement } = data.data;
+          
+          // 移除与当前绘制相关的所有pen元素（使用strokeId）
+          if (strokeId) {
+            this.elements = this.elements.filter(element => !(element.type === 'pen' && element.strokeId === strokeId));
+          }
+          
+          // 添加美化后的元素
+          this.elements.push(newElement);
+          
+          // 重新绘制画布
+          this.redrawCanvas();
+        } else if (data.type === 'socketId') {
+          ......
+        } else if (data.type === 'undoBeautify') {
+          // 处理撤销美化操作
+          console.log(`收到undoBeautify消息: ${data.data}`);
+          // 撤销美化操作，移除美化后的元素，恢复原始状态
+          // 由于我们没有保存原始状态，这里需要重新获取画布状态
+          // 服务器会广播canvasState消息，所以这里不需要做任何操作
+          // 只需要等待canvasState消息即可
+          console.log(`收到undoBeautify消息，等待canvasState更新`);
+        } else if (data.type === 'errorBeautify') {
+          // 处理撤销美化错误
+          this.errorUndoBeautify = true;
+          this.showToastMessage(data.data, 'error');
+        }
+      } catch (error) {
+        console.error(`处理WebSocket消息时出错: ${error}`);
+      }
+    };
+  }
+}
 ```
+**接收客户端处理美化信息操作的实现**
 
+可以看到从服务端收到beautify消息后，会根据消息内容，移除与当前绘制相关的所有pen元素（使用strokeId），并添加美化后的元素。最后，重新绘制画布，和刚刚上面讲的完全一致。
+
+
+**撤回美化后的各个接收客户端处理操作的实现**
+
+可以看到上面代码中也包含了处理撤销美化操作的实现，因此我们就先提前讲了，可以看到撤销美化操作是通过获取“原始状态”来实现的，而其他接收客户端并不会有这个原始状态，是等待服务器继续推送canvasState消息，显然这是直接传递了整个画布信息，接收后直接替换本地elements数组，然后重绘即可；
+
+
+**撤回美化的请求客户端需要实现的内容(请求发送，本地处理)**
+
+我们再返回来讲撤销美化请求的发送，发送请求方都做了些什么：
+```js
+undoBeautify() {
+  if (this.originalElements) {
+    // 显示确认弹窗
+    const userConfirmed = confirm('撤销美化会将画面恢复到上一次美化前的状态，美化后添加的内容会被清除。确定要继续吗？');
+    console.log('用户确认状态:', userConfirmed);
+    if (userConfirmed) {
+      // 发送撤销美化指令到服务器，包含strokeId
+      const strokeId = this.originalElements.strokeId;
+      this.sendWebSocketMessage('undoBeautify', { strokeId });
+      // 等待服务器处理完成
+      setTimeout(() => {
+        // 只有当前用户是房间最新美化操作才能撤回
+        if(!this.errorUndoBeautify){
+          // 恢复原始元素
+          this.elements = this.originalElements.elements;
+          // 重新绘制画布
+          this.redrawCanvas();
+          console.log('已执行撤销美化操作');
+        }
+        this.errorUndoBeautify = false;
+        // 清空原始元素的保存
+          this.originalElements = null;
+      }, 1000);
+    } else {
+      console.log('用户取消了撤销美化操作');
+    }
+  } else {
+    console.log('没有可撤销的美化操作');
+  }
+},
+```
+可以看到撤销美化操作的实现，先确认用户是否要撤销，然后发送撤销美化指令到服务器，等待服务器处理完成，最后根据服务器返回的结果，判断是否成功撤销美化操作。
+
+从提示的内容也可以知道，我们的<span style="color:green">**撤销美化操作是只撤回最新的美化操作，并且撤回会清空该美化操作后添加的内容，而考虑到多人合作，很有可能出现其他用户也新增了美化操作**</span>，如果随意撤回，容易造成意料之外的结果，因此设置了<span style="color:green">settimeout去等待后端的返回结果来判断是否能够进行撤回，而不是直接恢复</span>；
+
+不论能或不能，原始元素的保存都应该清空了(能则回退，不再需要；不能则以后都不能，也不再需要)；回退是利用之前保存的原始元素进行替换实现；与[美化实现中的内容](#美化白板前端实现——图形信息收集与替换)呼应；
+
+
+#### 后端实现
+后端方面，需要实现一个接口，用于接收前端发送的撤销美化指令，判断是否能够成功撤销回该美化操作。能则执行并广播canvasState消息，否则返回失败结果和原因。
+```js
+wss.on('connection', (ws, req, roomCode) => {
+  ......
+  ws.on('message', (data, isBinary) => {
+    try {
+      ......
+      if (parsed.type === 'undoBeautify') {
+        const room = meetingRoomManager.getRoom(roomCode);
+        const { strokeId } = parsed.data;
+        if (room?.beautifyState) {
+          // 因为可能有多用户操作，如果用户申请撤回美化的操作不是当前最新的美化操作，则驳回，
+          // 否则其他用户的美化操作会因为撤回而直接移除
+          if (strokeId !== room.beautifyState.strokeId) {
+            ws.send(JSON.stringify({
+              type: 'errorBeautify',
+              data: '其他用户已执行美化操作，撤回可能带来意外结果，建议您选择橡皮擦拭重绘'
+            }));
+            return;
+          } else {
+            meetingRoomManager.updateCanvasState(roomCode, room.beautifyState.originalState);
+            room.beautifyState = null;
+            meetingRoomManager.broadcastToRoom(roomCode, JSON.stringify({
+              type: 'canvasState',
+              data: meetingRoomManager.getCanvasState(roomCode)
+            }), ws.id);
+          }
+        }
+      }
+    } catch (e) { }
+  });
+})
+```
+可以看到通过strokeId来判断最新美化操作是否是当前用户的，不是则驳回，是则执行撤销美化操作，通过以前存储的originalState来实现撤销(更新canvasState)，随后广播发送canvasState消息，通知其他用户更新画布。
 
 ## 语音转写与会议摘要功能
 这部分都是结合ai大模型实现，会讲解如何调用大模型，以及传递给大模型前的各种参数处理操作；
