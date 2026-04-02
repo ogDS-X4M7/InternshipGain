@@ -1923,6 +1923,7 @@
 <p>接下来让我们慢慢讲解：</p>
 <h3 id="语音转写功能" tabindex="-1"><a class="header-anchor" href="#语音转写功能"><span>语音转写功能</span></a></h3>
 <p>这部分内容的代码量比较大，而且之前我对这方面的知识并不熟悉，这里按序慢慢讲解：</p>
+<h4 id="获取用户语音输入" tabindex="-1"><a class="header-anchor" href="#获取用户语音输入"><span>获取用户语音输入</span></a></h4>
 <p>首先把获取用户语音输入的代码放出来：</p>
 <div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">async</span> <span class="token function">startRecording</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
 <span class="line">  <span class="token keyword">try</span> <span class="token punctuation">{</span></span>
@@ -2012,7 +2013,7 @@
 <span class="line"><span class="token punctuation">}</span><span class="token punctuation">,</span></span>
 <span class="line"></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>可以看到这些功能基本都是通过浏览器的媒体设备API来实现的，包括获取用户语音输入、处理音频数据、调用大模型进行语音转写、处理返回文本结果、实现字幕功能等。这些api对我来说比较陌生，让我们逐个讲解：</p>
-<h4 id="音频api讲解" tabindex="-1"><a class="header-anchor" href="#音频api讲解"><span>音频api讲解</span></a></h4>
+<h5 id="代码讲解-实质是巨量音频api讲解" tabindex="-1"><a class="header-anchor" href="#代码讲解-实质是巨量音频api讲解"><span>代码讲解(实质是巨量音频api讲解)</span></a></h5>
 <p><strong>navigator.mediaDevices.getUserMedia</strong>:</p>
 <p>来看mdn的文档介绍：</p>
 <p><code v-pre>MediaDevices.getUserMedia() 会提示用户给予使用媒体输入的许可，媒体输入会产生一个MediaStream，里面包含了请求的媒体类型的轨道。此流可以包含一个视频轨道（来自硬件或者虚拟视频源，比如相机、视频采集设备和屏幕共享服务等等）、一个音频轨道（同样来自硬件或虚拟音频源，比如麦克风、A/D 转换器等等），也可能是其他轨道类型。</code></p>
@@ -2059,11 +2060,11 @@
 <li>1 ：输入声道数，与之前设置的单声道保持一致</li>
 <li>1 ：输出声道数，保持与输入声道数一致</li>
 </ul>
-<p><strong>processor.onaudioprocess</strong></p>
+<p><strong>processor.onaudioprocess和getChannelData</strong></p>
 <p>这部分代码临时存储采集到的音频数据，等待后续处理和发送，因为并不是每次采集完就要发送出去，缓存后再发效果可能更好；</p>
-<p>processor.onaudioprocess：音频处理器回调函数设置，这个回调函数每当音频缓冲区填满时触发（约每1024个样本触发一次）</p>
-<p>event.inputBuffer.getChannelData(0) ：获取第0声道（单声道）的音频数据</p>
-<p>float32ToInt16(inputData) ：将32位浮点音频数据转换为16位PCM格式(具体实现在下面的代码中)</p>
+<p><code v-pre>processor.onaudioprocess</code>：音频处理器回调函数设置，这个回调函数每当音频缓冲区填满时触发（约每1024个样本触发一次，至于为什么是1024，是因为上面createScriptProcessor设置参数1024）</p>
+<p><code v-pre>event.inputBuffer.getChannelData(0)</code> ：获取第0声道（单声道）的音频数据</p>
+<p><code v-pre>float32ToInt16(inputData)</code> ：将32位浮点音频数据转换为16位PCM格式(具体实现在下面的代码中)</p>
 <div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token comment">// 音频数据缓冲区</span></span>
 <span class="line"><span class="token keyword">let</span> audioBuffer <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span></span>
 <span class="line"></span>
@@ -2110,7 +2111,7 @@
 <span class="line">  <span class="token keyword">return</span> result<span class="token punctuation">;</span></span>
 <span class="line"><span class="token punctuation">}</span><span class="token punctuation">,</span></span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>const result = new Int16Array(length); 创建一个整数数组(用于存储转换后的16位PCM格式的数据)
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>const result = new Int16Array(length); 创建一个整数数组(用于存储转换后的16位PCM格式的数据，Int16Array 就是一个严格限定只能存 16 位有符号整数的专用数组，它不是普通的 JS 数组，是为高性能、省内存、处理二进制数据而生的类型化数组，存储数据时会自动转换为16位有符号整数格式，即-32768到32767)
 const s = Math.max(-1, Math.min(1, buffer[i])); 确保值在-1到1之间
 负数处理 ： s &lt; 0 ? s * 0x8000</p>
 <ul>
@@ -2123,7 +2124,18 @@ const s = Math.max(-1, Math.min(1, buffer[i])); 确保值在-1到1之间
 </ul>
 </li>
 </ul>
-<p><strong>下次接着写，这里讲到发送数据到服务器了，然后就是服务器再去请求大模型得到转写结果，websocket的onmessage接收服务器获取结果存入转录缓冲区，然后就对应上这里mergeTranscriptionResults函数操作转录缓冲区了</strong></p>
+<p><strong>typedArray.set(array, offset)</strong></p>
+<p>这个实际上并不是音频api，但也是我不懂的，第一次看到的时候还以为是数组的set方法，但是它不是数组的set方法，而是typedArray的set方法，用于将一个数组的元素复制到当前数组的指定位置。</p>
+<ul>
+<li>将源数组的数据复制到目标 TypedArray 中</li>
+<li>从指定的偏移量开始复制</li>
+<li>是一种高效的二进制数据复制方法</li>
+</ul>
+<p>可以看到这里是设置一个定时器，每400ms发送一次音频消息给服务器；这里的一些转换与上面学习的内容高度紧密结合，让我们来讲讲：</p>
+<ol>
+<li>首先合并缓冲区的音频数据，我们仍然创建一个Int16Array数组，用于存储合并后的音频数据，正如上面所说，严格限定只能存 16 位有符号整数，通过reduce计算这个数组的长度，buffer的长度则需要我们溯源audioBuffer，它在上面音频处理器回调函数中收集16位PCM格式的音频数据，而回调函数是缓冲区满触发，因此每个buffer的长度就是一个缓冲区大小，都是1024个样本。</li>
+<li>然后使用typedArray的set方法，将每个buffer的音频复制到合并后的数组中，偏移量从0开始，每次复制一个buffer的长度，偏移量增加buffer的长度。最后讲这个合并后的数组发送到服务器，由服务器处理；</li>
+</ol>
 <div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token comment">// 每400ms发送一次音频数据</span></span>
 <span class="line"><span class="token keyword">const</span> sendInterval <span class="token operator">=</span> <span class="token function">setInterval</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">{</span></span>
 <span class="line">  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>isRecording <span class="token operator">&amp;&amp;</span> audioBuffer<span class="token punctuation">.</span>length <span class="token operator">></span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> <span class="token keyword">this</span><span class="token punctuation">.</span>socket <span class="token operator">&amp;&amp;</span> <span class="token keyword">this</span><span class="token punctuation">.</span>socket<span class="token punctuation">.</span>readyState <span class="token operator">===</span> WebSocket<span class="token punctuation">.</span><span class="token constant">OPEN</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
@@ -2143,7 +2155,45 @@ const s = Math.max(-1, Math.min(1, buffer[i])); 确保值在-1到1之间
 <span class="line">  <span class="token punctuation">}</span></span>
 <span class="line"><span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">400</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token function">stopRecording</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p><strong>source.connect和processor.connect</strong></p>
+<p><code v-pre>source.connect(processor)</code>：将音频源连接到音频处理器</p>
+<p><code v-pre>processor.connect(audioContext.destination)</code>：将音频处理器连接到音频上下文的音频输出</p>
+<p>这里可以顺便联系一下上面的一些问题，因为到这里基本就结束了，剩下的无非是设置属性，合并获取服务器端返回结果(这部分我们<a href="#">后面</a>再讲)</p>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">this</span><span class="token punctuation">.</span>isRecording <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token keyword">this</span><span class="token punctuation">.</span>audioContext <span class="token operator">=</span> audioContext<span class="token punctuation">;</span></span>
+<span class="line"><span class="token keyword">this</span><span class="token punctuation">.</span>processor <span class="token operator">=</span> processor<span class="token punctuation">;</span></span>
+<span class="line"><span class="token keyword">this</span><span class="token punctuation">.</span>stream <span class="token operator">=</span> stream<span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token comment">// 启动缓冲区处理定时器，每3秒检查一次</span></span>
+<span class="line"><span class="token keyword">this</span><span class="token punctuation">.</span>bufferTimer <span class="token operator">=</span> <span class="token function">setInterval</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">{</span></span>
+<span class="line">  <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">mergeTranscriptionResults</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">3000</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h5 id="逻辑梳理与概念讲解-重要" tabindex="-1"><a class="header-anchor" href="#逻辑梳理与概念讲解-重要"><span>逻辑梳理与概念讲解<span style="color: green;">（<strong>重要</strong>）</span></span></a></h5>
+<p>首先梳理一下开始录音这部分代码的逻辑，就是：</p>
+<ol>
+<li>创建音频流</li>
+<li>创建音频上下文</li>
+<li>创建音频源和音频处理器</li>
+<li>连接音频节点</li>
+<li>启动缓冲区处理定时器，每3秒检查一次</li>
+</ol>
+<p>对于我们这种初学者，肯定会想知道这些步骤具体都是怎么回事，音频流是什么，音频上下文是什么，这些都在做什么？现在我们来梳理：</p>
+<p>每个步骤其实是环环相扣的，不过首先我们还是得先知道<span style="color: green;"><strong>概念</strong></span>：</p>
+<ul>
+<li><code v-pre>音频流</code>：就是从麦克风获取的音频数据流，它包含了音频数据的采样率、采样位数、声道数等信息。</li>
+<li><code v-pre>音频上下文</code>：总控，各种功能都会基于它展开。</li>
+<li><code v-pre>音频源</code>：音频数据的来源，比如麦克风、音频文件等。所以可以看到是音频上下文创建音频源，参数用的是音频流。意思就是往总控制室里接入麦克风信息，作为音频数据的源头</li>
+<li><code v-pre>音频处理器</code>：音频数据的处理单元，用于对音频数据进行处理，可以看到回调函数中批量处理1024个样本的音频数据为16位PCM格式。</li>
+</ul>
+<p><span style="color: green;"><strong>连接关系</strong></span>：可以看到最后这里音频源连接到音频处理器，音频处理器连接到音频上下文的音频输出，那么一切就都通畅了：</p>
+<p>在总控制室(音频上下文)里：音频源(麦克风输入音频流信息)-&gt;音频处理器(批量转换16位PCM格式，这里省略定时器批量收集)-&gt;音频上下文的音频输出(扬声器/耳机：发送到服务器或播放)</p>
+<p><strong>下次接着写，这里讲完音频api和开始录音的所有内容了，发送数据到服务器了，然后就是服务器再去请求大模型得到转写结果，websocket的onmessage接收服务器获取结果存入转录缓冲区，然后就对应上这里mergeTranscriptionResults函数操作转录缓冲区，下次接着快速写完停止录音，然后就转后端讲接收音频数据怎么处理，怎么发送请求大模型，最后再回来前端讲接收数据处理与字幕显示</strong></p>
+<h4 id="停止录音" tabindex="-1"><a class="header-anchor" href="#停止录音"><span>停止录音</span></a></h4>
+<p><strong>那么如果最后一句话没满1024缓冲区，回调函数就不处理吗，这部分数据会卡在这里吗？如果会处理，是为什么呢，因为不说话也会获取音频数据填满1024吗，那也就是不说话也会一直获取填满发送，那这些无效数据是不是后端处理，比如没说话不发送请求转文字？</strong></p>
+<h4 id="服务端处理音频数据-大模型请求" tabindex="-1"><a class="header-anchor" href="#服务端处理音频数据-大模型请求"><span>服务端处理音频数据(大模型请求)</span></a></h4>
+<h4 id="用户端数据处理与字幕显示" tabindex="-1"><a class="header-anchor" href="#用户端数据处理与字幕显示"><span>用户端数据处理与字幕显示</span></a></h4>
+<div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token function">stopRecording</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
 <span class="line">      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>isRecording<span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
 <span class="line">        <span class="token comment">// 发送停止转写的消息</span></span>
 <span class="line">        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">sendWebSocketMessage</span><span class="token punctuation">(</span><span class="token string">'stopTranscription'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
