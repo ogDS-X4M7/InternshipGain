@@ -37,9 +37,9 @@
 
 先讲一讲基础功能，即会议创建与加入，请求/操作成功失败的消息提示。
 
-### 首页前端实现
+## 首页前端实现
 
-**页面结构与设计**
+### 页面结构与设计
 
 首页其实就是整个项目的页面展示，后面讲的白板页面其实就是一个`component`组件，由`v-if`指令来控制显示隐藏。因为页面结构组成简单，所以包括请求/操作成功失败的消息提示也只需要用`v-if`指令控制显隐的`div`即可实现；
 ```js
@@ -58,7 +58,7 @@
     ...
 </div>
 ```
-**会议基础功能**：
+### 会议基础功能
 
 创建会议按钮，直接触发对应方法发送请求，获取会议码，进入会议室；
 
@@ -67,13 +67,13 @@
 因为非常简单，只是发送一些请求，所以这里就不贴出代码了。
 
 
-### 首页后端实现
+## 首页后端实现
 主要实现以下功能：
 - 生成唯一的会议室代码
 - 创建会议室
 - 加入会议室
 
-**唯一代码与创建会议室**
+### 唯一代码与创建会议室
 
 创建一个会议室管理类，用于管理所有的会议室。每个会议室都有一个唯一的会议室代码，用于标识会议室。
 
@@ -146,7 +146,7 @@ app.post('/api/create-meeting', (req, res) => {
   }
 });
 ```
-**加入会议室**
+### 加入会议室
 
 <span style="color: green;">**需要注意的是，首页部分并没有真正的加入会议室**</span>，加入会议室，开始会议是涉及到`websocket`连接的，项目设计中加入会议室是进入[会议室页面](#会议页前端实现)后才进行的连接操作，首页进行的操作其实只有校验会议室代码是否存在，决定是否进入会议室页面，仅此而已；api接口也只需要从`map`中get一下是否有请求时发送过来的会议室代码即可。
 
@@ -185,8 +185,8 @@ app.post('/api/join-meeting', (req, res) => {
 - 离开会议室(websocket断开连接)
 - 清理无人或长时间无活动的会议室
 
-### 会议页基础功能前端实现
-**进入会议室**
+## 会议页基础功能前端实现
+### 进入会议室
 
 之前已经讲过，会议页是一个组件，由`v-if`指令来控制显示隐藏。当用户创建/加入会议室成功(会议室代码存在)，这个组件被显示出来，传入会议室代码作为props，在组件生命周期钩子中添加对应的连接逻辑(创建websocket连接，并做数据处理)
 ```js
@@ -251,7 +251,7 @@ export default {
 }
 ```
 
-**离开会议室，为清理会议室提供支持**
+### 离开会议室，为清理会议室提供支持
 
 同理，离开会议室时需要断开连接，我们提供了离开会议的按钮，同时在组件的生命周期钩子中添加对应的断开连接逻辑(这个在[上面](#会议页前端实现)已经展示过)，这样的操作能够即使用户不点击离开会议按钮，也能及时断开与服务器的连接(这对于多人会议的消息传递，以及清理会议室的功能很重要)。
 
@@ -268,11 +268,11 @@ leaveMeeting() {
 ```
 
 
-### 会议页基础功能后端实现
+## 会议页基础功能后端实现
 
 下面来看代码，websocket连接直接挂钩的就是`进入会议室`和`离开会议室`功能；
 
-**进入会议室**
+### 进入会议室
 
 ```js
 // WebSocket
@@ -348,7 +348,7 @@ ws.send(JSON.stringify({
 }));
 ```
 
-**离开与清空会议室**
+### 离开与清空会议室
 
 最后我们来讲解一下离开会议室的功能：这部分功能很简单，其实就是前端关闭websocket连接，后端也需要清理对应的连接内容，包括语音，调用leaveRoom(减少房间成员数，移除成员，更新房间属性，为0则移除该房间)，和joinRoom一样很简单常规，这里就不展示了。
 ```js
@@ -393,10 +393,10 @@ server.listen(PORT, '0.0.0.0', () => {
 
 让我们一点一点讲解：
 
-### 实时协作白板基础功能
+## 实时协作白板基础功能
 
 这部分设计的功能众多，代码也比较多，因此对于每个部分功能分开讲解，分开展示，以便理解和阅读。这部分功能也是直接交由前端实现，因此贴出的代码也都是前端代码。
-#### 画笔与橡皮功能
+### 画笔与橡皮功能
 其实画笔功能在[之前的文档](./aboutCanvas#简单的白板实现)已经讲过，不过这里采取的是另一种分段的写法；对于简单的白板绘制确实是那样会更好，但因为我们的项目需求对于每一笔画都需要记录，甚至需要操作(比如美化、撤销等)，因此这里采取分段记录，即起始坐标，结束坐标都做记录并绘制；至于为什么橡皮功能也一起讲解，其实是因为<span style="color:green;">**橡皮功能的实现完全可以用画笔的逻辑来完成，橡皮可以看作是白色的画笔，逻辑复用就能够起到相同的效果**</span>；
 
 首先是常规的canvas画板，监听四个事件处理画笔绘制：同时白板需要工具栏，用于切换不同的画笔工具。
@@ -577,7 +577,7 @@ export default {
 }
 ```
 
-#### 图形绘制功能
+### 图形绘制功能
 接下来我们来介绍下图形绘制功能，包括矩形、圆形、菱形、箭头：
 
 设计上是用户点击工具栏上的图形图标，然后在画布上绘制对应的图形。画布上点击确定图形开始位置，<span style="color: green;">拖动改变图形大小</span>，最后松开鼠标绘制完成。也就是确认位置，<span style="color: green;">最后预览确认大小</span>，最后绘制完成。
@@ -782,7 +782,7 @@ stopDrawing() {
 },
 ```
 
-#### 文本绘制功能
+### 文本绘制功能
 注意到在上面的代码展示中经常会看到文本绘制部分的判断逻辑，的确，因为项目中实现的文本绘制功能比较复杂，支持文本框创建，大小调整，字体大小调整等功能；因此需要和使用的判断逻辑会比较多；
 
 下面来看代码：
@@ -1231,7 +1231,7 @@ redrawElements() {
 },
 ```
 
-#### 颜色与大小
+### 颜色与大小
 这个其实是最简单的，其实在上面的代码中很容易注意到，各种内容绘制前都是会获取当前的颜色与大小进行绘制的，这里直接贴出我们怎么设置颜色与大小的代码：通过input的type可以很轻松地实现，结合vue的v-model绑定就完成了；
 ```js
 <input type="color" v-model="color" />
@@ -1244,13 +1244,13 @@ redrawElements() {
 ```
 
 
-### 实时协作白板共享实现
+## 实时协作白板共享实现
 
 已经讲完白板基础功能的实现，也讲过websocket的通信使用，现在来讲讲我们的白板信息，以及用户在白板上进行的各种操作都是如何在会议中通信传递的：
 
 通信的过程很简单：发送方记录操作并发送，服务器接受并广播，接收方解析操作并执行；下面我们根据这三个过程来讲解白板操作的共享实现：
 
-#### 发送操作
+### 发送操作
 先来讲讲操作信息，其实所谓的<span style="color: green;">操作信息</span>就是白板上新增了什么内容，我们记录下来，这能够帮助我们传递信息，执行重绘，美化等操作，说到这里其实就很明显了，<span style="color: green;">就是elements中的记录</span>；我们每执行一次操作，就会记录下操作信息，同时就可以发送出去；
 
 将操作信息发送到服务器的动作其实在上面的代码中已经经常调用了，就是sendWebSocketMessage：比如绘制线段，使用橡皮擦，在draw方法中一段一段保存的，就在draw方法中保存element进入elements数组中，同时发送到服务器；
@@ -1294,7 +1294,7 @@ export default {
 ```
 可以看到并不复杂，就是判断下websocket是否打开，如果是，就发送消息，将type和data打包成json字符串发送，告知接收方操作类型和数据；如果不是，就报错；
 
-#### 服务器接收并广播
+### 服务器接收并广播
 从上面的发送操作我们可以知道是通过websocket发送消息的，那么服务器当然是通过websocket去接收，从逻辑上我们很容易了解到，服务器在这里只是起一个中转站，将收到的消息广播给其他用户的作用，因此它的逻辑并不复杂；
 
 ```js
@@ -1376,7 +1376,7 @@ class MeetingRoomManager {
   ......
 }
 ```
-#### 用户接收端接收并处理
+### 用户接收端接收并处理
 服务器广播后，其他用户会收到信息，并处理，绘制到他们的白板上，让我们来看具体实现：
 ```js
 export default {
@@ -1432,10 +1432,10 @@ export default {
 ```
 可以看到这里的操作也并不复杂，只需要根据消息类型判断，存储进入用户的elements数组中，依靠重绘功能，就能绘制到白板上；可以看到很多地方都是依靠重绘功能实现的，和[之前所说一样，重绘功能的确是非常重要的功能](#flag)
 
-### 美化白板识别算法
+## 美化白板识别算法
 接下来让我们来讲讲美化白板识别算法；识别算法主要在后端实现；前端负责发送手绘信息，接受后端返回的美化图形，并对原图形进行替换；
 
-#### 美化白板前端实现——图形信息收集与替换
+### 美化白板前端实现——图形信息收集与替换
 前端方面，绑定按钮，用户点击美化按钮后调用方法beautifyShape，实现美化功能；
 
 **首先检测用户是否绘制了一个图形，（至少3个点），如果没有绘制，就提示用户绘制一个图形；**
@@ -1525,7 +1525,7 @@ async beautifyShape() {
 },
 ```
 
-#### 美化白板后端实现(美化算法)
+### 美化白板后端实现(美化算法)
 前端在这部分的实现主要就是支持识别图形和替换图形，现在来讲讲在后端实现的美化算法：
 
 这里是请求的接口实现，可以看到是先调用了ShapeRecognitionService的recognizeShape方法，来识别用户绘制的图形(同时实现美化)，再调用beautifyShape方法，调整返回格式(按照前端存储元素格式返回)；
@@ -1548,6 +1548,7 @@ app.post('/api/recognize-shape', (req, res) => {
 2. 基于几何特征识别图形，通过调整识别图形算法的阈值，来提高识别的准确率，同时调整识别的顺序，放在前面识别的图形，比如圆，矩形，算法设计时就会提高识别的精度，增加识别手段，提高准确度，避免识别为其他图形。
 3. 对识别后的图形进行美化，比如调整颜色、宽度等，来符合用户的绘制意图。
 <a id="recognizeShape"></a>
+
 ```js
 recognizeShape(points) {
   try {
@@ -1905,12 +1906,12 @@ beautifyShape(shape) {
 ```
 
 
-### websocket同步与撤回美化实现
+## websocket同步与撤回美化实现
 上面的代码讲完了后端美化算法的实现，前端怎么发送信息和接收美化后的信息以及对应的处理也已经讲完。接下来我们要讲讲各用户之间是如何实现同步与撤回美化功能的。因为这些美化信息还需要同步；其实有了前后端通信，以及前面的websocket通信内容，不难想到还是美化操作前后端通信时实现的“存放入elements数组”的操作，增加一个广播来实现；其他用户端的处理逻辑和美化请求用户的处理逻辑相同，接收到服务端发送来的对应处理逻辑，做替换操作即可；
 
 不过光这么说还是不够，让我们来看实际实现：(我们依旧按照前端实现和后端实现来讲)
 
-#### 前端实现
+### 前端实现
 前端部分，我们需要讲：
 - 美化后各个接收客户端处理美化信息操作的实现；
 - 撤回美化的请求客户端需要实现的内容(请求发送，本地处理)；
@@ -2035,7 +2036,7 @@ undoBeautify() {
 不论能或不能，原始元素的保存都应该清空了(能则回退，不再需要；不能则以后都不能，也不再需要)；回退是利用之前保存的原始元素进行替换实现；与[美化实现中的内容](#美化白板前端实现——图形信息收集与替换)呼应；
 
 
-#### 后端实现
+### 后端实现
 后端方面，需要实现一个接口，用于接收前端发送的撤销美化指令，判断是否能够成功撤销回该美化操作。能则执行并广播canvasState消息，否则返回失败结果和原因。
 ```js
 wss.on('connection', (ws, req, roomCode) => {
@@ -2083,10 +2084,10 @@ wss.on('connection', (ws, req, roomCode) => {
   - 可视化展示
 
 接下来让我们慢慢讲解：
-### 语音转写功能
+## 语音转写功能
 这部分内容的代码量比较大，而且之前我对这方面的知识并不熟悉，这里按序慢慢讲解：
 
-#### 获取用户语音输入
+### 获取用户语音输入
 首先把获取用户语音输入的代码放出来：
 ```js
 async startRecording() {
@@ -2177,7 +2178,9 @@ async startRecording() {
 },
 ```
 可以看到这些功能基本都是通过浏览器的媒体设备API来实现的，包括获取用户语音输入、处理音频数据、调用大模型进行语音转写、处理返回文本结果、实现字幕功能等。这些api对我来说比较陌生，让我们逐个讲解：
-##### 代码讲解(实质是巨量音频api讲解)
+#### 代码讲解(实质是巨量音频api讲解)
+还有少量api调用在[下面](#音频api讲解补充)
+
 **navigator.mediaDevices.getUserMedia**:
 
 来看mdn的文档介绍：
@@ -2347,7 +2350,7 @@ this.bufferTimer = setInterval(() => {
   this.mergeTranscriptionResults();
 }, 3000);
 ```
-##### 逻辑梳理与概念讲解<span style="color: green;">（**重要**）</span>
+#### 逻辑梳理与概念讲解<span style="color: green;">（**重要**）</span>
 首先梳理一下开始录音这部分代码的逻辑，就是：
 1. 创建音频流
 2. 创建音频上下文
@@ -2368,12 +2371,537 @@ this.bufferTimer = setInterval(() => {
 在总控制室(音频上下文)里：音频源(麦克风输入音频流信息)->音频处理器(批量转换16位PCM格式，这里省略定时器批量收集)->音频上下文的音频输出(扬声器/耳机：发送到服务器或播放)
 
 **下次接着写，这里讲完音频api和开始录音的所有内容了，发送数据到服务器了，然后就是服务器再去请求大模型得到转写结果，websocket的onmessage接收服务器获取结果存入转录缓冲区，然后就对应上这里mergeTranscriptionResults函数操作转录缓冲区，下次接着快速写完停止录音，然后就转后端讲接收音频数据怎么处理，怎么发送请求大模型，最后再回来前端讲接收数据处理与字幕显示**
-#### 停止录音
-**那么如果最后一句话没满1024缓冲区，回调函数就不处理吗，这部分数据会卡在这里吗？如果会处理，是为什么呢，因为不说话也会获取音频数据填满1024吗，那也就是不说话也会一直获取填满发送，那这些无效数据是不是后端处理，比如没说话不发送请求转文字？**
+### 停止录音(关闭麦克风)
+上面讲完了开始录音(开启麦克风)，这里顺便把停止录音(关闭麦克风)一起讲了：
+```js
+stopRecording() {
+  if (this.isRecording) {
+    // 发送停止转写的消息
+    this.sendWebSocketMessage('stopTranscription', {});
+    
+    // 清除发送定时器
+    if (this.sendInterval) {
+      clearInterval(this.sendInterval);
+      this.sendInterval = null;
+    }
+    
+    // 关闭音频处理
+    if (this.processor) {
+      this.processor.disconnect();
+      this.processor = null;
+    }
+    
+    if (this.stream) {
+      this.stream.getTracks().forEach(track => track.stop());
+      this.stream = null;
+    }
+    
+    if (this.audioContext) {
+      this.audioContext.close();
+      this.audioContext = null;
+    }
+    
+    this.isRecording = false;
+    
+    // 清除缓冲区处理定时器
+    if (this.bufferTimer) {
+      clearInterval(this.bufferTimer);
+      this.bufferTimer = null;
+      console.log('停止转录缓冲区处理定时器');
+    }
+    
+    // 最后一次合并转录结果
+    this.mergeTranscriptionResults();
+    
+    console.log('停止录音');
+    
+  }
+},
+```
+可以看到主要就是一些善后操作，发送关闭语音转写的信息，关闭音频处理节点，关闭音频流，关闭音频上下文之类的；清空各类定时器，并且进行最后一次合并转录结果(这部分逻辑涉及到服务端语音转写后返回的结果处理，所以在[后面](#)再讲)。但是毕竟和前面的开始录音讲解的语音api高度紧密相关，因此这里补充讲解：
+#### 音频api讲解补充
+**processor.disconnect**
 
-#### 服务端处理音频数据(大模型请求)
+很好理解，就是关闭音频处理节点，断开音频处理器与音频上下文的连接，防止内存泄漏。
 
-#### 用户端数据处理与字幕显示
+**this.stream.getTracks().forEach(track => track.stop());**
+
+这部分需要讲解一下这里的代码是什么意思：其实是把所有轨道都关闭，因为音频流是一个实时的流，不能像视频流那样直接关闭，需要关闭所有轨道，才能关闭音频流。所以这里需要遍历所有轨道，关闭每个轨道。
+
+为什么关闭音频流需要这么复杂，而开启音频流却那么简单？
+
+这是因为navigator.mediaDevices.getUserMedia() 是一个 高级API ，它封装了底层的复杂操作：
+1. 权限管理 ：自动弹出权限请求对话框
+2. 设备选择 ：自动选择默认麦克风
+3. 参数配置 ：根据指定的参数（如采样率、声道数）配置音频设备
+4. 流创建 ：返回一个完整的 MediaStream 对象
+这些操作被浏览器内部处理，所以对开发者来说看起来很简单。
+
+关闭音频流需要更细致的操作，主要原因是：
+1. 资源释放：
+   - 麦克风是系统资源，需要明确释放
+   - 不释放会导致其他应用无法使用麦克风
+   - 浏览器会一直显示麦克风正在使用的指示
+2. 流的组成：
+   - MediaStream 可能包含多个轨道（tracks）
+   - 即使只请求了音频，也可能包含多个音频轨道
+   - 每个轨道都需要单独停止
+3. 底层设计：
+   - 音频设备的控制是基于轨道（track）的
+   - 停止整个流不会自动停止所有轨道
+   - 需要显式停止每个轨道以确保资源释放
+
+**this.audioContext.close();**
+
+很好理解，就是关闭音频上下文，释放资源。
+
+那么到此为止，关闭录音的内容就讲完了。
+
+
+### 服务端处理音频数据(大模型请求)
+现在可以开始讲解前端收集音频数据到服务端，服务端是如何处理，并且调用大模型实现语音转写的：
+
+首先来看接收消息部分的内容：
+#### 大体框架
+```js
+wss.on('connection', (ws, req, roomCode) => {
+  ......
+  ws.on('message', (data, isBinary) => {
+    try {
+      if (isBinary) {
+        if (speechService?.isConnected) {
+          speechService.sendAudio(data);
+        }
+        meetingRoomManager.broadcastToRoom(roomCode, data, ws.id);
+        return;
+      }
+      const parsed = JSON.parse(data.toString());
+      ......
+      if (parsed.type === 'startTranscription') {
+        if (!speechService) {
+          speechService = new SpeechService();
+        }
+        speechService.connect(t => {
+          const room = meetingRoomManager.getRoom(roomCode);
+          const nick = room?.members.find(m => m.socketId === ws.id)?.nickname || '未知';
+          meetingRoomManager.broadcastToRoom(roomCode, JSON.stringify({
+            type: 'transcriptionResult',
+            data: t,
+            speaker: nick
+          }));
+        }, console.error, () => { });
+      }
+      if (parsed.type === 'stopTranscription') speechService?.sendEnd();
+      ......
+    } catch (e) { }
+  });
+  ......
+})
+```
+可以看到分辨音频消息是通过isBinary参数来判断的，这个参数是ws自带的参数，能够自动识别，无需前端传递；在这里如果是二进制数据，就是音频数据，否则就是json字符串。我们有一个speechService对象，用于处理语音数据(这个我们稍后马上来讲解)，同时将这部分音频广播给其他用户，实现语音通话；
+
+当前端开启麦克风，则会发送语音转写的websocket消息(startTranscription)，可以看到SpeechService对象在这里创建，并且连接，调用了一些连接方法，并进行广播，这部分因为涉及SpeechService对象，所以还是先不展开讲解；[后面](#connect)会把这部分代码再专门提出来讲解的。
+
+当前端关闭麦克风，则会发送语音转写的websocket消息(stopTranscription)，可以看到SpeechService对象在这里调用sendEnd方法，断开连接，广播给语音通话的结束；
+
+#### SpeechService讲解(处理数据与大模型请求)
+可以看到转写解析的逻辑基本都是在这个对象结构内实现的，外部只能看到调用方法获取结果，实际怎么<span style="color:green">**通过websocket连接具体都封装在这里面(因为本身前后端通信就是依靠websocket，封装起来看起来不会那么乱)**</span>，那么现在来详解：
+```js
+const WebSocket = require('ws');
+const crypto = require('crypto');
+const config = require('./config');
+
+class SpeechService {
+  constructor() {
+    this.ws = null;
+    this.isConnected = false;
+    this.callbacks = {
+      onResult: null,
+      onError: null,
+      onClose: null
+    };
+  }
+
+  // 生成WebSocket连接参数
+  generateWsUrl() {
+    const { appId, apiKey, apiSecret, url } = config.xfyun;
+
+    // 生成UTC时间戳，格式：2025-09-04T15:38:07+0800
+    const now = new Date();
+    const offset = now.getTimezoneOffset();
+    const offsetHours = Math.abs(Math.floor(offset / 60));
+    const offsetMinutes = Math.abs(offset % 60);
+    const offsetSign = offset < 0 ? '+' : '-';
+    const formattedOffset = `${offsetSign}${offsetHours.toString().padStart(2, '0')}${offsetMinutes.toString().padStart(2, '0')}`;
+
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const seconds = now.getSeconds().toString().padStart(2, '0');
+
+    const utc = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${formattedOffset}`;
+
+    // 构造参数对象
+    const params = {
+      appId: appId,
+      accessKeyId: apiKey,
+      utc: utc,
+      lang: 'autodialect',
+      audio_encode: 'pcm_s16le',
+      samplerate: 16000
+    };
+
+    // 对参数按key进行升序排序
+    const sortedParams = Object.keys(params).sort().reduce((acc, key) => {
+      acc[key] = params[key];
+      return acc;
+    }, {});
+
+    // 生成baseString
+    let baseString = '';
+    for (const [key, value] of Object.entries(sortedParams)) {
+      baseString += `${encodeURIComponent(key)}=${encodeURIComponent(value)}&`;
+    }
+    baseString = baseString.slice(0, -1); // 移除最后一个&符号
+
+    // 生成signature
+    const hmac = crypto.createHmac('sha1', apiSecret);
+    hmac.update(baseString);
+    const signature = hmac.digest('base64');
+
+    // 构造最终的WebSocket URL
+    let wsUrl = `${url}?`;
+    for (const [key, value] of Object.entries(sortedParams)) {
+      wsUrl += `${encodeURIComponent(key)}=${encodeURIComponent(value)}&`;
+    }
+    wsUrl += `signature=${encodeURIComponent(signature)}`;
+
+    return wsUrl;
+  }
+
+  // 连接到讯飞API
+  connect(onResult, onError, onClose) {
+    this.callbacks.onResult = onResult;
+    this.callbacks.onError = onError;
+    this.callbacks.onClose = onClose;
+
+    const wsUrl = this.generateWsUrl();
+    console.log('Connecting to:', wsUrl);
+    this.ws = new WebSocket(wsUrl);
+
+    this.ws.on('open', () => {
+      console.log('Connected to XFYun API');
+      this.isConnected = true;
+    });
+
+    this.ws.on('message', (data) => {
+      this.handleMessage(data);
+    });
+
+    this.ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+      if (this.callbacks.onError) {
+        this.callbacks.onError(error);
+      }
+    });
+
+    this.ws.on('close', () => {
+      console.log('Disconnected from XFYun API');
+      this.isConnected = false;
+      if (this.callbacks.onClose) {
+        this.callbacks.onClose();
+      }
+    });
+  }
+
+  // 发送音频数据
+  sendAudio(audioData) {
+    if (!this.isConnected) return;
+
+    // 发送提取出的音频数据
+    if (audioData && audioData.length > 0) {
+      this.ws.send(audioData, { binary: true });
+    }
+  }
+
+    // 发送提取出的音频数据
+    if (audioData && audioData.length > 0) {
+      this.ws.send(audioData, { binary: true });
+    }
+  }
+
+  // 发送结束标志
+  sendEnd() {
+    if (!this.isConnected) return;
+
+    // 生成唯一的sessionId
+    const sessionId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+
+    // 发送结束标志，符合文档要求的格式
+    const endMessage = JSON.stringify({ end: true, sessionId: sessionId });
+    console.log('发送结束标志:', endMessage);
+    this.ws.send(endMessage);
+  }
+
+  // 处理讯飞API返回的消息
+  handleMessage(data) {
+    try {
+      console.log('收到讯飞API消息:', data);
+      // 尝试解析JSON数据
+      const result = JSON.parse(data);
+
+      console.log('解析后的消息:', result);
+
+      // 检查消息格式
+      if (result.msg_type === 'action') {
+        const actionData = result.data;
+        if (actionData.action === 'started') {
+          console.log('连接成功:', actionData);
+        } else if (actionData.action === 'end') {
+          console.log('会话结束:', actionData);
+          if (actionData.code !== '0') {
+            console.error('API错误:', actionData);
+            if (this.callbacks.onError) {
+              this.callbacks.onError(actionData);
+            }
+          }
+        } else {
+          console.log('未知动作类型:', actionData);
+        }
+      } else if (result.msg_type === 'result') {
+        const resultData = result.data;
+        // 处理不同格式的返回结果
+        if (resultData.text) {
+          // 直接返回文本
+          const text = resultData.text;
+          console.log('转写结果:', text || '无内容');
+          if (this.callbacks.onResult) {
+            this.callbacks.onResult(text);
+          }
+        } else if (resultData.cn && resultData.cn.st && resultData.cn.st.rt) {
+          // 处理嵌套格式的返回结果
+          const rt = resultData.cn.st.rt;
+          if (rt && rt.length > 0) {
+            let text = '';
+            rt.forEach(item => {
+              if (item.ws && item.ws.length > 0) {
+                item.ws.forEach(ws => {
+                  if (ws.cw && ws.cw.length > 0) {
+                    ws.cw.forEach(cw => {
+                      if (cw.w) {
+                        text += cw.w;
+                      }
+                    });
+                  }
+                });
+              }
+            });
+            console.log('转写结果:', text || '无内容');
+            if (this.callbacks.onResult) {
+              this.callbacks.onResult(text);
+            }
+          } else {
+            console.log('转写结果: 无内容');
+            if (this.callbacks.onResult) {
+              this.callbacks.onResult('');
+            }
+          }
+        } else {
+          console.log('转写结果: 无内容');
+          if (this.callbacks.onResult) {
+            this.callbacks.onResult('');
+          }
+        }
+      } else {
+        console.log('未知消息类型:', result);
+      }
+    } catch (error) {
+      console.error('Error parsing message:', error);
+      console.error('原始消息:', data);
+    }
+  }
+
+  // 关闭连接
+  close() {
+    if (this.ws) {
+      this.ws.close();
+    }
+  }
+}
+
+module.exports = SpeechService;
+```
+代码很多，让我们按照逻辑进行梳理，前端发送信息，首先是发送开始语音转写的请求，然后处理音频数据，缓冲区满发送请求转文字，最后结束转文字；因此最开始服务端会收到开始请求，创建SpeechService对象，connect连接；那么我们先来看连接的方法以及相关的内容：
+
+<span style="color:green">**说白了SpeechService对象就是在处理讯飞api的websocket连接，我们会根据各个步骤拆解来讲都需要做什么，现在是websocket的外部结构，监听各个事件，调用不同方法**</span>
+
+```js
+// 连接到讯飞API
+connect(onResult, onError, onClose) {
+  this.callbacks.onResult = onResult;
+  this.callbacks.onError = onError;
+  this.callbacks.onClose = onClose;
+
+  const wsUrl = this.generateWsUrl();
+  console.log('Connecting to:', wsUrl);
+  this.ws = new WebSocket(wsUrl);
+
+  this.ws.on('open', () => {
+    console.log('Connected to XFYun API');
+    this.isConnected = true;
+  });
+
+  this.ws.on('message', (data) => {
+    this.handleMessage(data);
+  });
+
+  this.ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+    if (this.callbacks.onError) {
+      this.callbacks.onError(error);
+    }
+  });
+
+  this.ws.on('close', () => {
+    console.log('Disconnected from XFYun API');
+    this.isConnected = false;
+    if (this.callbacks.onClose) {
+      this.callbacks.onClose();
+    }
+  });
+}
+```
+可以看到，<span style="color:green">connect方法中传入了三个回调函数</span>，分别是onResult、onError、onClose，接着<span style="color:green">生成了wsUrl，然后创建一个WebSocket对象，与讯飞API进行websocket连接</span>，设置open事件、message事件、error事件、close事件；这些回调函数分别在事件中使用，<span style="color:green">onResult没有直接显示，实际上被放到了handleMessage方法中使用，作用是获取转写结果后需要执行的逻辑，onError处理错误，onClose处理关闭连接；</span>
+<a id="connect"></a>
+
+这时候我们返回去看之前的connect方法的调用就很清晰了：
+```js
+speechService.connect(t => {
+  const room = meetingRoomManager.getRoom(roomCode);
+  const nick = room?.members.find(m => m.socketId === ws.id)?.nickname || '未知';
+  meetingRoomManager.broadcastToRoom(roomCode, JSON.stringify({
+    type: 'transcriptionResult',
+    data: t,
+    speaker: nick
+  }));
+}, console.error, () => { });
+```
+这里就是建立连接到讯飞api，onResult获取转写结果之后，将内容进行广播，广播到房间中的所有成员(前面的逻辑是在找到对应的房间，并且在广播信息中添加当前说话的用户昵称)；遇到错误就打印；关闭不做额外操作；
+
+注意到连接到讯飞api是生成了wsUrl，然后创建一个WebSocket对象，与讯飞API进行websocket连接；那么为什么需要自己生成一个url呢？这其实是讯飞API的websocket地址，需要自己生成，因为讯飞API的websocket地址是动态的，需要根据用户id和密钥来生成。这在官方文档中是有说明的，那么接下来我们来看看如何生成讯飞API的websocket地址。
+
+<span style="color:green">**如何连接讯飞api(生成讯飞API的websocket地址)**</span>
+
+```js
+// 生成WebSocket连接参数
+generateWsUrl() {
+  const { appId, apiKey, apiSecret, url } = config.xfyun;
+
+  // 生成UTC时间戳，格式：2025-09-04T15:38:07+0800
+  const now = new Date();
+  const offset = now.getTimezoneOffset();
+  const offsetHours = Math.abs(Math.floor(offset / 60));
+  const offsetMinutes = Math.abs(offset % 60);
+  const offsetSign = offset < 0 ? '+' : '-';
+  const formattedOffset = `${offsetSign}${offsetHours.toString().padStart(2, '0')}${offsetMinutes.toString().padStart(2, '0')}`;
+
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const day = now.getDate().toString().padStart(2, '0');
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  const seconds = now.getSeconds().toString().padStart(2, '0');
+
+  const utc = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${formattedOffset}`;
+
+  // 构造参数对象
+  const params = {
+    appId: appId,
+    accessKeyId: apiKey,
+    utc: utc,
+    lang: 'autodialect',
+    audio_encode: 'pcm_s16le',
+    samplerate: 16000
+  };
+
+  // 对参数按key进行升序排序
+  const sortedParams = Object.keys(params).sort().reduce((acc, key) => {
+    acc[key] = params[key];
+    return acc;
+  }, {});
+
+  // 生成baseString
+  let baseString = '';
+  for (const [key, value] of Object.entries(sortedParams)) {
+    baseString += `${encodeURIComponent(key)}=${encodeURIComponent(value)}&`;
+  }
+  baseString = baseString.slice(0, -1); // 移除最后一个&符号
+
+  // 生成signature
+  const hmac = crypto.createHmac('sha1', apiSecret);
+  hmac.update(baseString);
+  const signature = hmac.digest('base64');
+
+  // 构造最终的WebSocket URL
+  let wsUrl = `${url}?`;
+  for (const [key, value] of Object.entries(sortedParams)) {
+    wsUrl += `${encodeURIComponent(key)}=${encodeURIComponent(value)}&`;
+  }
+  wsUrl += `signature=${encodeURIComponent(signature)}`;
+
+  return wsUrl;
+}
+```
+
+上面的connect中还调用了handleMessage方法，来处理讯飞api返回的结果(还记得我们是从connect中延伸出来的吗哈哈)；但是按照逻辑，连接讯飞api，应该是发送消息给讯飞api，然后才是处理返回结果，因此我们先跳过handleMessage方法，[后面]再讲；接下来，前端开始发送音频数据，服务端接收到后进行处理，也就是sendAudio方法；那么我们来看这个方法以及相关的内容：
+
+<span style="color:green">**如何发送请求到讯飞api(发送音频信息给讯飞api处理)**</span>
+
+```js
+// 发送音频数据
+sendAudio(audioData) {
+  if (!this.isConnected) return;
+
+  // 发送提取出的音频数据
+  if (audioData && audioData.length > 0) {
+    this.ws.send(audioData, { binary: true });
+  }
+}
+```
+这个方法的调用在[大体框架](#大体框架)里，当speechService连接成功，也就是讯飞与服务器websocket连接成功后，对于前端发送的音频数据，会调用sendAudio方法，来发送音频数据给讯飞api处理。前端发送的音频数据我们就不多说了，16位pcm编码，采样率16000，单声道，通过websocket从前端发送到服务端，又由服务端发送到讯飞api，这里直接将音频数据发送出去即可。
+```js
+wss.on('connection', (ws, req, roomCode) => {
+  ......
+  ws.on('message', (data, isBinary) => {
+    try {
+      if (isBinary) {
+        if (speechService?.isConnected) {
+          speechService.sendAudio(data);
+        }
+        ...
+      }
+    }
+  })
+})
+```
+之前曾经多写过websocket帧解析的逻辑，实际上毫无必要，因为调用了ws库，已经自动解析(ws.onmessage事件会自动解析websocket帧，只有直接从TCP裸连接收到数据，才需要手动解析WebSocket帧)。
+
+<span style="color:green">**如何解析讯飞api返回的结果**</span>
+
+最后我们来看看handleMessage方法，这其实就是与讯飞api通信时获取到讯飞api返回的结果的解析过程：
+
+**这个问题留到看后端代码的时候处理，我认为大概率是后端处理的：**
+那么如果最后一句话没满1024缓冲区，回调函数就不处理吗，这部分数据会卡在这里吗？如果会处理，是为什么呢，因为不说话也会获取音频数据填满1024吗，那也就是不说话也会一直获取填满发送，那这些无效数据是不是后端处理，比如没说话不发送请求转文字？
+
+**请注意上面的生成url文档也没写呢，这里的handleMessage方法还不着急写，明天先把前面的完成再说**
+
+### 用户端数据处理与字幕显示
 
 
 
