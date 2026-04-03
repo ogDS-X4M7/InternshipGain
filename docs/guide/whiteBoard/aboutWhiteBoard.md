@@ -2309,7 +2309,13 @@ const s = Math.max(-1, Math.min(1, buffer[i])); 确保值在-1到1之间
 
 可以看到这里是设置一个定时器，每400ms发送一次音频消息给服务器；这里的一些转换与上面学习的内容高度紧密结合，让我们来讲讲：
 1. 首先合并缓冲区的音频数据，我们仍然创建一个Int16Array数组，用于存储合并后的音频数据，正如上面所说，严格限定只能存 16 位有符号整数，通过reduce计算这个数组的长度，buffer的长度则需要我们溯源audioBuffer，它在上面音频处理器回调函数中收集16位PCM格式的音频数据，而回调函数是缓冲区满触发，因此每个buffer的长度就是一个缓冲区大小，都是1024个样本。
-2. 然后使用typedArray的set方法，将每个buffer的音频复制到合并后的数组中，偏移量从0开始，每次复制一个buffer的长度，偏移量增加buffer的长度。最后讲这个合并后的数组发送到服务器，由服务器处理；
+2. 然后使用typedArray的set方法，将每个buffer的音频复制到合并后的数组中，偏移量从0开始，每次复制一个buffer的长度，偏移量增加buffer的长度。最后讲这个合并后的数组的二进制数据(mergedData.buffer)发送到服务器，由服务器处理；
+
+<span style="color: green;">**这里可能引出一个问题，mergedData.buffer是从哪来的？**</span>
+
+其实mergedData 是 Int16Array，它天生自带一个名叫.buffer的属性，是JS语法自带的。Int16Array只是一层 “视图”，真正的二进制数据存在buffer里。WebSocket的.send()方法不认识Int16Array，认识二进制原始数据：ArrayBuffer；因此这里发送的是buffer。
+
+<span style="color: green;">**附上一个重点知识：websocket的send只能发送字符串、ArrayBuffer、Blob类型的数据**</span>
 
 ```js
 // 每400ms发送一次音频数据
@@ -2858,11 +2864,116 @@ generateWsUrl() {
   return wsUrl;
 }
 ```
+这部分逻辑是在生成讯飞API的websocket地址时，需要根据用户id和密钥来生成。这些内容在[文档](https://www.xfyun.cn/doc/spark/asr_llm/rtasr_llm.html#_1-%E6%A6%82%E8%BF%B0)中都有说明。我们就是按照文档要求在做，这里我把原本文档的内容贴出来：
+```
+2.1 握手阶段
+websocket 协议带参请求：
+wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1?{请求参数}
 
-上面的connect中还调用了handleMessage方法，来处理讯飞api返回的结果(还记得我们是从connect中延伸出来的吗哈哈)；但是按照逻辑，连接讯飞api，应该是发送消息给讯飞api，然后才是处理返回结果，因此我们先跳过handleMessage方法，[后面]再讲；接下来，前端开始发送音频数据，服务端接收到后进行处理，也就是sendAudio方法；那么我们来看这个方法以及相关的内容：
+常见的实际生产的一个 ws 握手请求的 url 示例如下，含义为实时转写 pcm 格式 16000 采样率的实时转写结果：
+wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1?accessKeyId=bb1542cda0ab4696031e2f3244206479&appId=27cc644f&uuid=664e7e56f779492ca75a58839914164b&utc=2025-09-04T15%3A38%3A07%2B0800&audio_encode=pcm_s16le&lang=autodialect&samplerate=16000&signature=4PuTRjRmWbJecdZQoANVA4I9B0s%3D
+
+#请求参数格式
+key1=value1&key2=value2…（key 和 value 都需要进行 urlencode）
+```
+可以看到需要携带参数accessKeyId，appId，uuid，utc，lang，audio_encode，samplerate，signature。
+
+其中，accessKeyId是用户id，appId是应用id，uuid是用户id，lang是语言，audio_encode是音频编码，samplerate是采样率，这些都是我们可以确定的，比如id是从讯飞api控制台注册用户获取，我们保存到项目的config文件中(敏感信息)，而lang，audio_encode，samplerate我们本就是参照官方的例子，实时转写 pcm 格式 16000 采样率，因此不需要改动；
+
+只有utc是UTC时间戳，signature是签名，这两个需要我们处理。这整个方法也的确就是在生成，处理这个问题：
+```js
+// 生成UTC时间戳，格式：2025-09-04T15:38:07+0800
+const now = new Date();
+const offset = now.getTimezoneOffset();
+const offsetHours = Math.abs(Math.floor(offset / 60));
+const offsetMinutes = Math.abs(offset % 60);
+const offsetSign = offset < 0 ? '+' : '-';
+const formattedOffset = `${offsetSign}${offsetHours.toString().padStart(2, '0')}${offsetMinutes.toString().padStart(2, '0')}`;
+
+const year = now.getFullYear();
+const month = (now.getMonth() + 1).toString().padStart(2, '0');
+const day = now.getDate().toString().padStart(2, '0');
+const hours = now.getHours().toString().padStart(2, '0');
+const minutes = now.getMinutes().toString().padStart(2, '0');
+const seconds = now.getSeconds().toString().padStart(2, '0');
+
+const utc = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${formattedOffset}`;
+```
+
+首先是生成UTC时间戳，格式：2025-09-04T15:38:07+0800，可以看到我们调用了`now.getTimezoneOffset()`方法，来获取当前<span style="color:green">时间的时区偏移量，单位是分钟</span>。这个可能平时用的比较少，就是用来计算最后那个“+0800”的；因此说是偏移量；根据它的正负我们可以知道应该使用“+”还是“-”。
+
+另外还有一个`padStart(2, '0')`方法，它能够确保数字是两位数，不足前面补0，非常实用；
+
+最后就是很常规的时间获取，拼接，就不赘述了；
+
+接下来是生成signature，同样来看看文档：
+```
+signature 生成
+
+获取 baseString，步骤如下：
+
+将所有请求参数（不包含 signature）按参数名进行升序排序
+对每个参数的键和值分别进行 URL 编码
+按照 "编码后的键=编码后的值&" 的格式拼接所有参数
+移除最后一个多余的 "&" 符号，得到 baseString
+示例: accessKeyId=XXX&appId=XXX&lang=cn&utc=2025-03-24T00%3A01%3A19%2B0800&uuid=edf53e32-6533-4d6a-acd3-fe4df14ee332
+以 accessKeySecret 为密钥，对 baseString 进行 HmacSHA1 加密，得到二进制字节数组
+
+对 HmacSHA1 加密后的字节数组进行 Base64 编码，得到最终的 signature
+
+示例: IrrzsJeOFk1NGfJHW6SkHUoN9CU=
+```
+可以看到signature的生成逻辑在官方文档那个中写的很明确，先是根据我们的链接参数升序排序，拼接baseString，然后以 accessKeySecret为密钥，对baseString进行HmacSHA1加密，得到二进制字节数组，最后对这个数组进行Base64编码即可；
+
+那么我们的代码就直接按照官方文档的指示完成就可以了：
+```js
+// 构造参数对象
+const params = {
+  appId: appId,
+  accessKeyId: apiKey,
+  utc: utc,
+  lang: 'autodialect',
+  audio_encode: 'pcm_s16le',
+  samplerate: 16000
+};
+// 对参数按key进行升序排序
+const sortedParams = Object.keys(params).sort().reduce((acc, key) => {
+  acc[key] = params[key];
+  return acc;
+}, {});
+
+// 生成baseString
+let baseString = '';
+for (const [key, value] of Object.entries(sortedParams)) {
+  baseString += `${encodeURIComponent(key)}=${encodeURIComponent(value)}&`;
+}
+baseString = baseString.slice(0, -1); // 移除最后一个&符号
+
+// 生成signature
+const hmac = crypto.createHmac('sha1', apiSecret);
+hmac.update(baseString);
+const signature = hmac.digest('base64');
+
+// 构造最终的WebSocket URL
+let wsUrl = `${url}?`;
+for (const [key, value] of Object.entries(sortedParams)) {
+  wsUrl += `${encodeURIComponent(key)}=${encodeURIComponent(value)}&`;
+}
+wsUrl += `signature=${encodeURIComponent(signature)}`;
+
+return wsUrl;
+```
+可以看到我们先准备了参数对象，然后新建一个对象(排序后参数)，对参数对象取key，对key进行升序排序，reduce读取升序排序的数组，通过key读取参数对象的value，给排序后对象赋值，得到一个排序后的参数对象(这样做是因为对象不能直接排序，只能新建一个对象，通过key来排序最可靠)；
+
+排序后我们就要拼接baseString了，根据文档提示，按需将key，value编码，拼接起来；最后记得移除最后一个‘&’；
+
+接着就是通过`crypto.createHmac`方法，以apiSecret为密钥对baseString进行`HmacSHA1`加密，得到二进制字节数组，最后对这个数组进行Base64编码`hmac.digest('base64');`就得到了signature；
+
+最后将这些参数拼接起来，就得到了讯飞API的websocket地址；
 
 <span style="color:green">**如何发送请求到讯飞api(发送音频信息给讯飞api处理)**</span>
 
+上面的connect中还调用了handleMessage方法，来处理讯飞api返回的结果(还记得我们是从connect中延伸出来的吗哈哈)；但是按照逻辑，连接讯飞api，应该是发送消息给讯飞api，然后才是处理返回结果，因此我们先跳过handleMessage方法，[后面]再讲；接下来，前端开始发送音频数据，服务端接收到后进行处理，也就是sendAudio方法；那么我们来看这个方法以及相关的内容：
 ```js
 // 发送音频数据
 sendAudio(audioData) {
@@ -2896,89 +3007,303 @@ wss.on('connection', (ws, req, roomCode) => {
 
 最后我们来看看handleMessage方法，这其实就是与讯飞api通信时获取到讯飞api返回的结果的解析过程：
 
-**这个问题留到看后端代码的时候处理，我认为大概率是后端处理的：**
-那么如果最后一句话没满1024缓冲区，回调函数就不处理吗，这部分数据会卡在这里吗？如果会处理，是为什么呢，因为不说话也会获取音频数据填满1024吗，那也就是不说话也会一直获取填满发送，那这些无效数据是不是后端处理，比如没说话不发送请求转文字？
+这部分内容仍然需要看官方文档的指引，现在让我们来看看官方文档是怎么说的：
+```
+2.3 返回结果说明
+返回结果为 JSON 格式，具体字段说明如下：
 
-**请注意上面的生成url文档也没写呢，这里的handleMessage方法还不着急写，明天先把前面的完成再说**
+参数	类型	说明
+action	string	结果标识：started 握手，result 结果，error 异常
+code	string	结果码（见错误码）
+data	string	结果数据
+desc	string	描述
+sid	string	会话 ID
+
+2.3.1 转写结果
+字段	含义	详细描述
+data.cn.st.bg	句子开始时间	
+data.cn.st.ed	句子结束时间	
+data.cn.st.rt.ws.cw.w	词识别内容	具体的转写结果
+data.cn.st.rt.ws.cw.lg	转写识别的语言	lang 为 autominor 时返回当前识别的语言
+data.cn.st.rt.ws.cw.wp	词标识	n-普通词；s-顺滑词；p-标点；g-分段标识
+data.cn.st.rt.ws.cw.wb	词开始时间	
+data.cn.st.rt.ws.cw.we	词结束时间	
+data.cn.st.rt.ws.cw.rl	角色分离标识	只有角色分离功能打开时出现，角色切换时变化（rl=1/2/3... 表示切换到该说话人；rl=0 表示继续上一说话人）
+data.cn.st.type	结果类型标识	0-确定性结果；1-中间结果
+data.seg_id	返回消息号	从 0 开始
+data.cn、data.cn.st	音频段结果	无实际意义，按此结构解析
+data.cn.st.rt	返回音频转写结果	音频转写结果内容从此字段解析
+data.ls	是否为转写最终结果	true 表示最后一帧，false 表示非最后一帧
+#2.3.2 返回结果示例
+正常结果：
+{
+    "msg_type": "result",
+    "res_type": "asr",
+    "data": {
+        "seg_id": 0,
+        "cn": {
+            "st": {
+                "rt": [
+                    {
+                        "ws": [
+                            {
+                                "cw": [
+                                    {
+                                        "w": "项",
+                                        "wp": "n",
+                                        "rl": 0,
+                                        "lg": "cn"
+                                    }
+                                ],
+                                "wb": 15,
+                                "we": 64
+                            },
+                            {
+                                "cw": [
+                                    {
+                                        "w": "兽",
+                                        "wp": "n",
+                                        "lg": "cn"
+                                    }
+                                ],
+                                "wb": 65,
+                                "we": 95
+                            },
+                            {
+                                "cw": [
+                                    {
+                                        "w": "南",
+                                        "wp": "n",
+                                        "lg": "cn"
+                                    }
+                                ],
+                                "wb": 96,
+                                "we": 147
+                            }
+                        ]
+                    }
+                ],
+                "bg": 930,
+                "type": "0",
+                "ed": 2590
+            }
+        },
+        "ls": false
+    }
+}
+异常结果：
+{
+    "data": {
+        "desc": "功能异常",
+        "detail": {
+            "domain": "ist_ed_test"
+        },
+        "fnType": "ast",
+        "normal": false
+    },
+    "msg_type": "result",
+    "res_type": "frc"
+}
+```
+没什么重要内容，直接根据返回的结果来解析，即主要获取data.cn.st.rt.ws.cw.w；按结构解析即可；
+```js
+// 处理讯飞API返回的消息
+handleMessage(data) {
+  try {
+    console.log('收到讯飞API消息:', data);
+    // 尝试解析JSON数据
+    const result = JSON.parse(data);
+
+    console.log('解析后的消息:', result);
+
+    // 检查消息格式
+    if (result.msg_type === 'action') {
+      const actionData = result.data;
+      if (actionData.action === 'started') {
+        console.log('连接成功:', actionData);
+      } else if (actionData.action === 'end') {
+        console.log('会话结束:', actionData);
+        if (actionData.code !== '0') {
+          console.error('API错误:', actionData);
+          if (this.callbacks.onError) {
+            this.callbacks.onError(actionData);
+          }
+        }
+      } else {
+        console.log('未知动作类型:', actionData);
+      }
+    } else if (result.msg_type === 'result') {
+      const resultData = result.data;
+      // 处理不同格式的返回结果
+      if (resultData.text) {
+        // 直接返回文本
+        const text = resultData.text;
+        console.log('转写结果:', text || '无内容');
+        if (this.callbacks.onResult) {
+          this.callbacks.onResult(text);
+        }
+      } else if (resultData.cn && resultData.cn.st && resultData.cn.st.rt) {
+        // 处理嵌套格式的返回结果
+        const rt = resultData.cn.st.rt;
+        if (rt && rt.length > 0) {
+          let text = '';
+          rt.forEach(item => {
+            if (item.ws && item.ws.length > 0) {
+              item.ws.forEach(ws => {
+                if (ws.cw && ws.cw.length > 0) {
+                  ws.cw.forEach(cw => {
+                    if (cw.w) {
+                      text += cw.w;
+                    }
+                  });
+                }
+              });
+            }
+          });
+          console.log('转写结果:', text || '无内容');
+          if (this.callbacks.onResult) {
+            this.callbacks.onResult(text);
+          }
+        } else {
+          console.log('转写结果: 无内容');
+          if (this.callbacks.onResult) {
+            this.callbacks.onResult('');
+          }
+        }
+      } else {
+        console.log('转写结果: 无内容');
+        if (this.callbacks.onResult) {
+          this.callbacks.onResult('');
+        }
+      }
+    } else {
+      console.log('未知消息类型:', result);
+    }
+  } catch (error) {
+    console.error('Error parsing message:', error);
+    console.error('原始消息:', data);
+  }
+}
+```
+当然还是需要根据result.msg_type来判断是转写结果还是其他连接会话信息(比如开始，结束等)；如果result.msg_type是result，那么就根据resultData.cn.st.rt.ws.cw.w来解析；最后记得使用外部传入的回调函数this.callbacks.onResult(text);来返回结果，我们要靠这个实现广播效果呢哈哈。
 
 ### 用户端数据处理与字幕显示
+我们讲完了用户端处理并发送音频数据，又讲完服务端接收数据，与讯飞api交互，最后发送给用户端；现在我们来讲讲用户端如何处理数据，显示字幕。
 
+只说了语音转写功能，我们其实这部分是会顺便实现<span style="color:green">**语音通话**</span>功能的，正如[之前](#大体框架)里面的代码中，服务端收到音频信息，是会广播播放的；
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+可以看到下面的代码里，如果收到二进制数据(音频数据),我们会直接播放`this.playAudioData(new Int16Array(event.data));`回看之前的代码，通过websocket只能发送ArrayBuffer，而playAudioData需要的是Int16Array，因此这里需要转换一下。<span style="color:green">**因为ArrayBuffer只是一段内存，没有格式、没有结构。套上new Int16Array()告诉播放器：这段二进制是16位PCM音频，把这段二进制数据，按16位有符号整数格式去解析，才能正常播放**</span>
 ```js
-stopRecording() {
-      if (this.isRecording) {
-        // 发送停止转写的消息
-        this.sendWebSocketMessage('stopTranscription', {});
-        
-        // 清除发送定时器
-        if (this.sendInterval) {
-          clearInterval(this.sendInterval);
-          this.sendInterval = null;
-        }
-        
-        // 关闭音频处理
-        if (this.processor) {
-          this.processor.disconnect();
-          this.processor = null;
-        }
-        
-        if (this.stream) {
-          this.stream.getTracks().forEach(track => track.stop());
-          this.stream = null;
-        }
-        
-        if (this.audioContext) {
-          this.audioContext.close();
-          this.audioContext = null;
-        }
-        
-        this.isRecording = false;
-        
-        // 清除缓冲区处理定时器
-        if (this.bufferTimer) {
-          clearInterval(this.bufferTimer);
-          this.bufferTimer = null;
-          console.log('停止转录缓冲区处理定时器');
-        }
-        
-        // 最后一次合并转录结果
-        this.mergeTranscriptionResults();
-        
-        console.log('停止录音');
-        
+export default {
+  ......
+  methods: {
+    ......
+    setupWebSocket() {
+      try {
+        this.socket.onmessage = (event) => {
+          try {
+            // 检查是否是二进制数据（音频数据）
+            if (event.data instanceof ArrayBuffer) {
+              console.log(`收到音频数据，长度: ${event.data.byteLength}`);
+              // 处理音频数据
+              this.playAudioData(new Int16Array(event.data));
+              return;
+            } else if (event.data instanceof Blob) {
+              console.log(`收到音频数据，大小: ${event.data.size}`);
+              // 将 Blob 转换为 ArrayBuffer
+              event.data.arrayBuffer().then(arrayBuffer => {
+                console.log(`Blob转换为ArrayBuffer，长度: ${arrayBuffer.byteLength}`);
+                this.playAudioData(new Int16Array(arrayBuffer));
+              }).catch(error => {
+                console.error(`Blob转换为ArrayBuffer失败:`, error);
+              });
+              return;
+            }
+            
+            console.log(`收到WebSocket消息: ${event.data}`);
+            const data = JSON.parse(event.data);
+            if (data.type === 'canvasState') {
+              ......
+            } 
+            ......
+            else if (data.type === 'transcriptionResult') {
+              // 处理语音转写结果
+              console.log(`收到语音转写结果: ${data.data || '无内容'} from ${data.speaker || '未知'}`);
+              const speaker = data.speaker || '未知';
+              const transcription = data.data || '';
+              console.log(`当前转写内容: ${transcription || '无内容'} 发言人: ${speaker}`);
+              
+              // 将转写结果添加到缓冲区
+              if (transcription) {
+                this.transcriptionBuffer.push({ text: transcription, speaker: speaker, timestamp: Date.now() });
+                console.log('添加到转录缓冲区:', transcription, '发言人:', speaker);
+              }
+              
+              // 更新用户转录结果
+              if (transcription) {
+                this.userTranscriptions[speaker] = transcription;
+                
+                // 清除之前的定时器
+                if (this.transcriptionTimers[speaker]) {
+                  clearTimeout(this.transcriptionTimers[speaker]);
+                }
+                
+                // 设置新的定时器，5秒后清除该用户的字幕
+                this.transcriptionTimers[speaker] = setTimeout(() => {
+                  delete this.userTranscriptions[speaker];
+                  delete this.transcriptionTimers[speaker];
+                }, 5000); // 5000ms = 5秒
+              }
+            } else if (data.type === 'transcriptionError') {
+              // 处理语音转写错误
+              console.error(`语音转写错误: ${data.data}`);
+              this.showToastMessage(`语音转写错误: ${data.data}`, 'error');
+            }
+            ......
+          } catch (error) {
+            console.error(`处理WebSocket消息时出错: ${error}`);
+          }
+        };
       }
-    },
+    }
+  }
+}
 ```
+**明天从else if (data.type === 'transcriptionResult') {开始看，讲解结果解析**
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 会议摘要功能
