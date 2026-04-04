@@ -2344,7 +2344,7 @@ const sendInterval = setInterval(() => {
 
 `processor.connect(audioContext.destination)`：将音频处理器连接到音频上下文的音频输出
 
-这里可以顺便联系一下上面的一些问题，因为到这里基本就结束了，剩下的无非是设置属性，合并获取服务器端返回结果(这部分我们[后面](#)再讲)
+这里可以顺便联系一下上面的一些问题，因为到这里基本就结束了，剩下的无非是设置属性，合并获取服务器端返回结果(这部分我们[后面](#mergeTranscriptionResults)再讲)<a id="bufferTimer"></a>
 ```js
 this.isRecording = true;
 this.audioContext = audioContext;
@@ -2356,7 +2356,7 @@ this.bufferTimer = setInterval(() => {
   this.mergeTranscriptionResults();
 }, 3000);
 ```
-#### 逻辑梳理与概念讲解<span style="color: green;">（**重要**）</span>
+#### 逻辑梳理与概念讲解 <span style="color: green;">（**重要**）</span>
 首先梳理一下开始录音这部分代码的逻辑，就是：
 1. 创建音频流
 2. 创建音频上下文
@@ -3270,40 +3270,161 @@ export default {
 }
 ```
 **明天从else if (data.type === 'transcriptionResult') {开始看，讲解结果解析**
+接下来根据获取到的转写结果(transcriptionResult)，进行处理和显示字幕；还记得后端websocket连接讯飞api时，回调函数中将转写结果与用户昵称等合并起来，一起广播；就是为了这里解析出来，然后能够实现在字幕前添加发言人昵称的效果；可以看到我们还将转写结果添加到了缓冲区，这个我们[稍后](#mergeTranscriptionResults)就讲；这里涉及到字幕实现的内容，也许需要回顾一下前端在字幕功能上实现的写法：
+```js
+<div class="multi-subtitle-container">
+  <div v-for="(transcription, speaker) in userTranscriptions" :key="speaker" class="subtitle-container">
+    <div class="subtitle">
+      <span class="speaker-name">{{ speaker }}:</span> {{ transcription }}
+    </div>
+  </div>
+</div>
+```
+可以看到我们根据userTranscriptions对象，来遍历每个用户的转写结果，然后根据speaker来添加发言人昵称。最后将结果显示在字幕上。所以再看到上面的内容就能更好地理解了：当有转写结果时，获取转写结果+转写昵称，添加到userTranscriptions对象中，这样v-for就会及时识别响应式变化，实时显示字幕；同时我们设置定时器，5秒后，删除该用户的字幕，而且在前面添加检测并删除定时器的机制，这是因为字幕转写是实时的，这里可能需要用一个例子来解释：实时语音转写并不只是把一段录音发送上去，然后解析回来。而是连续地解析，例如，用户发言“生活就像海洋”，那么发送音频信号以及收到的解析可能随时间分为三条：
+- 0-0.4s:生活
+- 0.4-0.8s:生活就像
+- 0.8-1.2s:生活就像海洋
 
+这也是因为用户看到的字幕结果应该是“生活”→“生活就像”→“生活就像海洋”；而不是生活，就像，海洋，这样的字幕效果很差；因此讯飞api的语音转写功能返回的结果是自动连续的，那么对于我们处理的人来说就不需要拼接了，直接替换为新的转写内容即可，非常方便。因此每次收到新的转写结果，我们检测并删除定时器，替换转写结果，并重新定时5s，5s后字幕自动消失，防止挡住视野，同时删除对应的定时器。
 
+<a id="mergeTranscriptionResults"></a>
+讲完了字幕的实现，我们可以回来讲一下刚刚提到的，转写结果添加到了缓冲区的实现和原因，这其实是为了支持后面的[会议摘要功能](#会议摘要功能)。简单来说，会议摘要需要我们把会议内容发送给大模型，大模型才能够帮我们总结；因此我们需要实时整理转写结果，同样也是因为上面提到的字幕连续功能，会导致我们收到的消息有很多冗余：
+- 0-0.4s:生活
+- 0.4-0.8s:生活就像
+- 0.8-1.2s:生活就像海洋
 
+如果直接收集了发送出去，那大模型会觉得参会人员口吃(开玩笑)，但是确实效果不好，也浪费token。因此我们设计缓冲区，定时处理整理这些转写结果。还记得在[前面](#bufferTimer)这部分稍微往前一点的代码中，是提到过这个缓冲区定时器的，现在是时候讲解了：
 
+```js
+// 合并缓冲区中的转录结果
+mergeTranscriptionResults() {
+  if (this.transcriptionBuffer.length === 0) return;
+  
+  // 按时间排序
+  this.transcriptionBuffer.sort((a, b) => a.timestamp - b.timestamp);
 
+  // 带有时间的结果数组
+  const textWIthTime = [];
+  
+  // 按发言人分组，携带时间信息
+  const groupedBySpeaker = {};
+  this.transcriptionBuffer.forEach(item => {
+    if (item.text && item.text.trim() !== '') {
+      if (!groupedBySpeaker[item.speaker]) {
+        groupedBySpeaker[item.speaker] = [];
+      }
+      groupedBySpeaker[item.speaker].push(item);
+    }
+  });
+  
+  // 按发言人分组对转录结果进行去重，多人发言内容同时去重的话太过混乱
+  for (const speaker in groupedBySpeaker) {
+    const items = groupedBySpeaker[speaker];
+    // 去除前缀重复的内容，只保留最长的版本
+    const uniqueItems = this.removePrefixDuplicates(items);
+    
+    // 将去重后的结果添加到时间结果数组
+    uniqueItems.forEach(item => {
+      textWIthTime.push(item);
+    });
+  }
 
+  // 时间结果数组中存储了携带时间、去重完毕的发言结果，排序后提取文本内容
+  textWIthTime.sort((a, b) => a.timestamp - b.timestamp);
+  textWIthTime.forEach(item => {
+    const transcriptionItem = { speaker: item.speaker, text: item.text };
+    if (this.transcriptionHistory.length === 0) {
+      // 如果历史记录为空，直接添加
+      this.transcriptionHistory.push(transcriptionItem);
+      console.log('添加到转录历史:', transcriptionItem);
+    } else {
+      const lastItem = this.transcriptionHistory[this.transcriptionHistory.length - 1];
+      
+      // 检查是否是同一个发言人
+      if (lastItem.speaker === item.speaker) {
+        // 检查当前文本是否是历史记录最后一条的前缀
+        if (this.isPrefixWithPunctuation(item.text, lastItem.text)) {
+          // 如果是前缀，不添加
+          console.log('当前文本是历史记录最后一条的前缀，不添加:', item.text);
+        } 
+        // 检查历史记录最后一条是否是当前文本的前缀
+        else if (this.isPrefixWithPunctuation(lastItem.text, item.text)) {
+          // 如果是前缀，替换历史记录最后一条
+          this.transcriptionHistory[this.transcriptionHistory.length - 1] = transcriptionItem;
+          console.log('替换历史记录最后一条:', transcriptionItem);
+        } 
+        // 如果不是前缀关系，且不完全重复，添加到历史记录
+        else if (lastItem.text !== item.text) {
+          this.transcriptionHistory.push(transcriptionItem);
+          console.log('添加到转录历史:', transcriptionItem);
+        }
+      } else {
+        // 不同发言人，直接添加
+        this.transcriptionHistory.push(transcriptionItem);
+        console.log('添加到转录历史:', transcriptionItem);
+      }
+    }
+  });
+  
+  // 清空缓冲区
+  this.transcriptionBuffer = [];
+},
 
+// 去除前缀重复的内容，只保留最长的版本
+removePrefixDuplicates(items) {
+  if (items.length <= 1) return items;
+  
+  // 按长度降序排序，必须携带时间信息这里才能按照长度去排序，否则会破坏时间顺序
+  // 长度排序是为了方便后续的前缀检查，最长的先进入数组，确保前缀检查时，最长的文本在数组的前面，不需要替换
+  items.sort((a, b) => b.text.length - a.text.length);
+  
+  const uniqueItems = [];
+  
+  for (let i = 0; i < items.length; i++) {
+    const currentItem = items[i];
+    let isPrefix = false;
+    
+    // 检查是否是已添加文本的前缀（忽略标点符号）
+    for (let j = 0; j < uniqueItems.length; j++) {
+      if (this.isPrefixWithPunctuation(currentItem.text, uniqueItems[j].text  )) {
+        isPrefix = true;
+        break;
+      }
+    }
+    
+    if (!isPrefix) {
+      uniqueItems.push(currentItem);
+    }
+  }
+  
+  return uniqueItems;
+},
 
+// 检查text1是否是text2的前缀（忽略所有标点符号）
+isPrefixWithPunctuation(text1, text2) {
+  // 去除所有标点符号和空白字符
+  const cleanText1 = text1.replace(/[\p{P}\s]+/gu, '');
+  const cleanText2 = text2.replace(/[\p{P}\s]+/gu, '');
+  
+  // 检查cleanText1是否是cleanText2的前缀
+  return cleanText2.startsWith(cleanText1);
+},
+```
+可以看到逻辑还是比较复杂的，在处理多人发言转写，并且转写内容重复，时间分片缓冲处理时，需要考虑多个方面，包括但不限于：
+- 转写结果去重时，需要移除标点符号的影响，比如两个相同的转写结果，其中一个开头带了一个句号，虽然不同，也需要去重；
+- 因为按时间分片处理，两个相同的转写结果可能被划分到两个缓冲区，因此需要添加对上一个缓冲区最后一个转写结果的去重判断；
 
+可以看到mergeTranscriptionResults逻辑中主要是将转写结果添加到transcriptionHistory数组中，通过时间排序，按发言人分组对发言内容进行处理并汇总到textWIthTime，之后进行时间排序保障发言顺序，最后比对上一个时间切片的最后一句转写结果进行最后去重，并将结果添加到transcriptionHistory数组中。
 
+<span style="color:green">**简而言之：根据发言人分组，分组后对发言内容去重并汇总，对汇总结果时间排序，最后进行补充逻辑处理，存入转写历史的结果数组中。**</span>
 
+详细来看，分组后，对每个人的发言内容，执行removePrefixDuplicates逻辑，removePrefixDuplicates会对发言内容根据长度降序排序，确保最长的文本在数组的前面，这样就不需要替换，省去一部分逻辑。<span>**但这么做会破坏时间顺序，这也是为什么我们要携带时间信息，并且最后汇总后时间排序**</span>；长度排序后会进行前缀检查，遍历所有文本，如果有前缀，那么最长的肯定已经在数组中，直接忽视，无前缀则进入结果数组，最后将结果数组返回；
 
+前缀检查使用的是isPrefixWithPunctuation函数，它的逻辑非常简单，核心是startsWith方法，不过在此之前，我们<span style="color:green">**需要预防转写结果中标点符号和空白字符的干扰**</span>，因此函数逻辑中会先移除所有标点符号和空白字符，然后再使用startsWith方法检查text1是否是text2的前缀。
 
+得到去重完毕后的时间结果数组textWIthTime，我们对这个数组进行时间排序，确保每个发言人的转写结果按时间顺序排列。最后，我们对这个数组进行补充逻辑处理，<span style="color:green">**因为有可能出现两个相同的转写结果被划分到两个时间片里，需要我们发信啊去重，因此要获取上一个时间切片的最后一句转写结果，与当前时间切片的第一句转写结果进行比较，看看相互的前缀关系，保留更长的一条，**</span>，没有前缀关系则直接存入转写历史的结果数组中。
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+至此，转写结果的前端处理与字幕显示就完全结束了。也讲解了mergeTranscriptionResults的实现，这其实不能算是字幕相关的内容，它主要是为了下面的会议摘要功能的实现提供数据基础。那么后面我们就只需要看会议摘要功能是怎么利用这些数据调用大模型生成会议摘要的。
 
 
 ## 会议摘要功能
