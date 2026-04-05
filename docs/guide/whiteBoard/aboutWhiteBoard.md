@@ -2864,7 +2864,7 @@ generateWsUrl() {
   return wsUrl;
 }
 ```
-这部分逻辑是在生成讯飞API的websocket地址时，需要根据用户id和密钥来生成。这些内容在[文档](https://www.xfyun.cn/doc/spark/asr_llm/rtasr_llm.html#_1-%E6%A6%82%E8%BF%B0)中都有说明。我们就是按照文档要求在做，这里我把原本文档的内容贴出来：
+这部分逻辑是在生成讯飞API的websocket地址时，需要根据用户id和密钥来生成。这些内容在[官方文档](https://www.xfyun.cn/doc/spark/asr_llm/rtasr_llm.html#_1-%E6%A6%82%E8%BF%B0)中都有说明。我们就是按照文档要求在做，这里我把原本文档的内容贴出来：
 ```
 2.1 握手阶段
 websocket 协议带参请求：
@@ -3269,7 +3269,6 @@ export default {
   }
 }
 ```
-**明天从else if (data.type === 'transcriptionResult') {开始看，讲解结果解析**
 接下来根据获取到的转写结果(transcriptionResult)，进行处理和显示字幕；还记得后端websocket连接讯飞api时，回调函数中将转写结果与用户昵称等合并起来，一起广播；就是为了这里解析出来，然后能够实现在字幕前添加发言人昵称的效果；可以看到我们还将转写结果添加到了缓冲区，这个我们[稍后](#mergeTranscriptionResults)就讲；这里涉及到字幕实现的内容，也许需要回顾一下前端在字幕功能上实现的写法：
 ```js
 <div class="multi-subtitle-container">
@@ -3422,9 +3421,520 @@ isPrefixWithPunctuation(text1, text2) {
 
 前缀检查使用的是isPrefixWithPunctuation函数，它的逻辑非常简单，核心是startsWith方法，不过在此之前，我们<span style="color:green">**需要预防转写结果中标点符号和空白字符的干扰**</span>，因此函数逻辑中会先移除所有标点符号和空白字符，然后再使用startsWith方法检查text1是否是text2的前缀。
 
-得到去重完毕后的时间结果数组textWIthTime，我们对这个数组进行时间排序，确保每个发言人的转写结果按时间顺序排列。最后，我们对这个数组进行补充逻辑处理，<span style="color:green">**因为有可能出现两个相同的转写结果被划分到两个时间片里，需要我们发信啊去重，因此要获取上一个时间切片的最后一句转写结果，与当前时间切片的第一句转写结果进行比较，看看相互的前缀关系，保留更长的一条，**</span>，没有前缀关系则直接存入转写历史的结果数组中。
+得到去重完毕后的时间结果数组textWIthTime，我们对这个数组进行时间排序，确保每个发言人的转写结果按时间顺序排列。最后，我们对这个数组进行补充逻辑处理，<span style="color:green">**因为有可能出现两个相同的转写结果被划分到两个时间片里，需要我们发信啊去重，因此要获取上一个时间切片的最后一句转写结果，与当前时间切片的第一句转写结果进行比较，看看相互的前缀关系，保留更长的一条，**</span>没有前缀关系则直接存入转写历史的结果数组中。
 
 至此，转写结果的前端处理与字幕显示就完全结束了。也讲解了mergeTranscriptionResults的实现，这其实不能算是字幕相关的内容，它主要是为了下面的会议摘要功能的实现提供数据基础。那么后面我们就只需要看会议摘要功能是怎么利用这些数据调用大模型生成会议摘要的。
 
 
 ## 会议摘要功能
+### 会议摘要功能前端实现
+会议生成摘要的功能主要是后端实现，前端就负责展示：
+```js
+......
+<button @click="generateSummary">生成摘要</button>
+......
+<div v-if="summary" class="summary-container">
+  <h4>会议摘要:</h4>
+  <div class="summary-content" v-html="summary"></div>
+  <button @click="clearSummary">清空摘要</button>
+</div>
+```
+生成摘要的方法也正如之前所说，先合并转录结果，保障收集信息(发言内容)的实时性和准确性，再提取白板内容，最后向服务端发送请求，将白板内容与发言内容都发送出去，后端去调用大模型生成摘要，最后根据结果展示摘要。
+```js
+async generateSummary() {
+  try {
+    // 先合并转录结果
+    this.mergeTranscriptionResults();
+    // 提取白板内容
+    const whiteboardContent = this.elements.map(element => {
+      if (element.type === 'text') {
+        return `文本: ${element.text}`;
+      } else if (element.type === 'rectangle') {
+        return '矩形图形';
+      } else if (element.type === 'circle') {
+        return '圆形图形';
+      } else if (element.type === 'diamond') {
+        return '菱形图形';
+      } else if (element.type === 'arrow') {
+        return '箭头图形';
+      } else if (element.type === 'pen') {
+        return '手绘图形';
+      }
+      return '';
+    }).filter(Boolean).join('\n');
+    
+    if (!whiteboardContent) {
+      this.showToastMessage('白板内容为空，请先添加内容', 'info');
+      return;
+    }
+    
+    const response = await fetch('http://192.168.153.168:8080/api/generate-summary', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        whiteboardContent,
+        transcriptionHistory: this.transcriptionHistory.map(item => {
+          if (typeof item === 'object' && item.text) {
+            return `${item.speaker}: ${item.text}`;
+          }
+          return item;
+        }).join('\n')
+      })
+    });
+    
+    const result = await response.json();
+    if (result.success) {
+      this.summary = result.summary;
+    } else {
+      console.error('生成摘要失败:', result.error);
+    }
+  } catch (error) {
+    console.error('发送数据失败:', error);
+  }
+},
+clearSummary() {
+  this.summary = '';
+},
+```
+### 会议摘要功能后端实现
+真正与大模型交互的是后端，后端会根据前端发送的白板内容与发言内容，调用大模型生成会议摘要。让我们来看接口
+```js
+app.post('/api/generate-summary', async (req, res) => {
+  try {
+    const s = new SummaryService();
+    const sum = await s.generateSummary(req.body.whiteboardContent, req.body.transcriptionHistory);
+    res.json({ success: true, summary: sum });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+```
+可以看到和语音转写功能实现类似，都会new一个对象，将另外的websocket连接内容封装在对象中实现；那么接下来我们来看会议摘要大模型的连接实现(SummaryService);
+```js
+const WebSocket = require('ws');
+const CryptoJS = require('crypto-js');
+const config = require('./config');
+
+class SummaryService {
+  constructor() {
+    this.appId = config.xfyun.appId;
+    this.apiKey = config.xfyun.apiKey;
+    this.apiSecret = config.xfyun.apiSecret;
+  }
+
+  // 生成会议摘要
+  async generateSummary(whiteboardContent, transcriptionHistory) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // 生成WebSocket连接URL
+        const wsUrl = await this.generateWebSocketUrl();
+
+        // 构建请求数据
+        const requestData = {
+          header: {
+            app_id: this.appId,
+            uid: 'user_' + Date.now()
+          },
+          parameter: {
+            chat: {
+              domain: '4.0Ultra',
+              temperature: 0.5,
+              max_tokens: 32768
+            }
+          },
+          payload: {
+            message: {
+              text: [
+                {
+                  role: 'system',
+                  content: '你是一个会议摘要助手，需要根据语音转写记录和白板内容生成会议摘要，包括核心结论、待办事项等。'
+                },
+                {
+                  role: 'user',
+                  content: `请根据以下内容生成会议摘要：\n\n语音转写记录：${transcriptionHistory}\n\n白板内容：${whiteboardContent}`
+                }
+              ]
+            }
+          }
+        };
+
+        // 建立WebSocket连接
+        const ws = new WebSocket(wsUrl);
+
+        let summary = '';
+        let isComplete = false;
+
+        ws.on('open', () => {
+          // 发送请求
+          ws.send(JSON.stringify(requestData));
+        });
+
+        ws.on('message', (data) => {
+          try {
+            const response = JSON.parse(data);
+
+            // 处理响应
+            if (response.header.code === 0) {
+              // 提取摘要内容
+              if (response.payload && response.payload.choices && response.payload.choices.text) {
+                response.payload.choices.text.forEach(item => {
+                  summary += item.content;
+                });
+              }
+
+              // 检查是否完成
+              if (response.header.status === 2) {
+                isComplete = true;
+                ws.close();
+                resolve(summary);
+              }
+            } else {
+              console.error('API Error:', response.header.message);
+              ws.close();
+              reject(new Error(response.header.message));
+            }
+          } catch (error) {
+            console.error('Error parsing response:', error);
+          }
+        });
+
+        ws.on('error', (error) => {
+          console.error('WebSocket error:', error);
+          reject(error);
+        });
+
+        ws.on('close', () => {
+          if (!isComplete) {
+            reject(new Error('WebSocket connection closed before completing'));
+          }
+        });
+
+        // 超时处理
+        setTimeout(() => {
+          if (!isComplete) {
+            ws.close();
+            reject(new Error('Request timeout'));
+          }
+        }, 60000);
+
+      } catch (error) {
+        console.error('Error generating summary:', error);
+        resolve('生成摘要失败，请重试。');
+      }
+    });
+  }
+
+  // 生成WebSocket连接URL
+  async generateWebSocketUrl() {
+    return new Promise((resolve, reject) => {
+      try {
+        const apiKey = this.apiKey;
+        const apiSecret = this.apiSecret;
+        const url = config.xfyun.spark.url;
+        const host = new URL(url).host;
+        const date = new Date().toGMTString();
+        const algorithm = 'hmac-sha256';
+        const headers = 'host date request-line';
+        const signatureOrigin = `host: ${host}\ndate: ${date}\nGET /v4.0/chat HTTP/1.1`;
+        const signatureSha = CryptoJS.HmacSHA256(signatureOrigin, apiSecret);
+        const signature = CryptoJS.enc.Base64.stringify(signatureSha);
+        const authorizationOrigin = `api_key="${apiKey}", algorithm="${algorithm}", headers="${headers}", signature="${signature}"`;
+        const authorization = Buffer.from(authorizationOrigin).toString('base64');
+        const finalUrl = `${url}?authorization=${encodeURIComponent(authorization)}&date=${encodeURIComponent(date)}&host=${encodeURIComponent(host)}`;
+        resolve(finalUrl);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  // 生成模拟摘要
+  getMockSummary(whiteboardContent, transcriptionHistory) {
+    return `# 会议摘要\n\n## 核心结论\n1. 会议讨论了项目的整体架构设计\n2. 确定了技术栈选型：前端使用Vue.js，后端使用Node.js\n3. 制定了项目开发计划，分为三个阶段\n\n## 待办事项\n1. 完成前端白板组件的开发\n2. 实现实时通信功能\n3. 集成AI语音转写和图形识别功能\n4. 进行系统测试和性能优化\n\n## 会议参与者\n- 前端开发团队\n- 后端开发团队\n- 产品经理\n\n会议时间：${new Date().toLocaleString()}`;
+  }
+}
+
+module.exports = SummaryService;
+```
+可以看到相对来说代码比较简单，没有什么处理逻辑，只是按照[官方文档](https://www.xfyun.cn/doc/spark/general_url_authentication.html)生成动态的WebSocket连接URL，然后websocket连接，其中有一些配置，比如大模型提示词等，让我们来结合官方文档逐步讲解：
+
+#### 生成WebSocket连接URL
+稍微看两眼generateSummary就会注意到前几个步骤就需要我们生成url，因此先讲generateWebSocketUrl，让我们先来看看官方文档在生成url方面的文档：
+```
+1.2 鉴权参数
+参数	类型	必须	说明	示例
+host	string	是	请求的主机	aichat.xf-yun.com(使用时需替换为实际使用的接口地址)
+date	string	是	当前时间戳，采用RFC1123格式，时间偏差需控制在300s内	Fri, 05 May 2023 10:43:39 GMT
+GET	string	是	请求方式	/v1.1/chat HTTP/1.1
+authorization	string	是	base64编码的签名信息	参考下方生成方式
+最终url需要的参数如上，下方以Python为例进行鉴权参数的生成示例，开发者如果使用其它开发语言可以按照相同时间戳和apikey等常量来逐步生成参数和下方示例比对，确保鉴权步骤无误
+
+#1.2.1 date参数生成规则
+from datetime import datetime
+from time import mktime
+from wsgiref.handlers import format_date_time
+
+cur_time = datetime.now()
+date = format_date_time(mktime(cur_time.timetuple()))
+# 假使生成的date和下方使用的date = Fri, 05 May 2023 10:43:39 GMT
+
+#1.2.2 authorization参数生成规则
+1）到控制台获取APIKey 和APISecret参数
+
+2）利用上方的date动态拼接生成字符串tmp，这里以星火url为例，实际使用需要根据具体的请求url替换host和path。
+
+tmp = "host: " + "spark-api.xf-yun.com" + "\n"
+tmp += "date: " + date + "\n"
+tmp += "GET " + "/v1.1/chat" + " HTTP/1.1"
+"""上方拼接生成的tmp字符串如下
+host: spark-api.xf-yun.com
+date: Fri, 05 May 2023 10:43:39 GMT
+GET /v1.1/chat HTTP/1.1
+"""
+
+3）利用hmac-sha256算法结合APISecret对上一步的tmp签名，获得签名后的摘要tmp_sha。
+
+import hmac
+import hashlib
+# 此处假设APISecret = MjlmNzkzNmZkMDQ2OTc0ZDdmNGE2ZTZi 
+tmp_sha = hmac.new(self.APISecret.encode('utf-8'), tmp.encode('utf-8'), 						digestmod=hashlib.sha256).digest()
+"""此时生成的tmp_sha结果如下
+b'\xcf\x98\x07v\xed\xe9\xc5Ux\x0032\x93\x8e\xbb\xc0\xe5\x83C\xda\xba\x05\x0c\xd1\xdew\xccN7?\r\xa4'
+"""
+
+4）将上方的tmp_sha进行base64编码生成signature
+
+import base64
+signature = base64.b64encode(tmp_sha).decode(encoding='utf-8')
+"""此时生成的结果如下
+z5gHdu3pxVV4ADMyk467wOWDQ9q6BQzR3nfMTjc/DaQ==
+"""
+
+5）利用上面生成的signature，拼接下方的字符串生成authorization_origin
+
+# 假设步骤1控制台获取的APIKey=addd2272b6d8b7c8abdd79531420ca3b
+authorization_origin = f"api_key=\"{api_key}\", algorithm=\"hmac-sha256\", headers=\"host date request-line\", signature=\"{signature}\""
+"""此时生成的authorization_origin字符串如下
+api_key="addd2272b6d8b7c8abdd79531420ca3b", algorithm="hmac-sha256", headers="host date request-line", signature="z5gHdu3pxVV4ADMyk467wOWDQ9q6BQzR3nfMTjc/DaQ="
+"""
+
+6）最后再将上方的authorization_origin进行base64编码,生成最终的authorization
+
+authorization = base64.b64encode(authorization_origin.encode('utf-8')).decode(encoding='utf-8')
+"""此时生成的authorization如下
+YXBpX2tleT0iYWRkZDIyNzJiNmQ4YjdjOGFiZGQ3OTUzMTQyMGNhM2IiLCBhbGdvcml0aG09ImhtYWMtc2hhMjU2IiwgaGVhZGVycz0iaG9zdCBkYXRlIHJlcXVlc3QtbGluZSIsIHNpZ25hdHVyZT0iejVnSGR1M3B4VlY0QURNeWs0Njd3T1dEUTlxNkJRelIzbmZNVGpjL0RhUT0i
+"""
+
+#1.2.3 生成最终url
+将鉴权参数组合成最终的键值对，并urlencode生成最终的握手url。开发者可先根据上面的步骤一步步进行参数校验，确保生成的参数无误。
+
+from urllib.parse import urlencode
+
+v = {
+		"authorization": authorization, # 上方鉴权生成的authorization
+        "date": date,  # 步骤1生成的date
+    	"host": "spark-api.xf-yun.com" # 请求的主机名，根据具体接口替换
+}
+url = "wss://spark-api.xf-yun.com/v1.1/chat?" + urlencode(v)
+"""生成的最终url如下
+wss://spark-api.xf-yun.com/v1.1/chat?authorization=YXBpX2tleT0iYWRkZDIyNzJiNmQ4YjdjOGFiZGQ3OTUzMTQyMGNhM2IiLCBhbGdvcml0aG09ImhtYWMtc2hhMjU2IiwgaGVhZGVycz0iaG9zdCBkYXRlIHJlcXVlc3QtbGluZSIsIHNpZ25hdHVyZT0iejVnSGR1M3B4VlY0QURNeWs0Njd3T1dEUTlxNkJRelIzbmZNVGpjL0RhUT0i&date=Fri%2C+05+May+2023+10%3A43%3A39+GMT&host=spark-api.xf-yun.com
+"""
+```
+结合官方文档，我们再回去看代码，就会更加清晰：
+
+首先我们将所需的信息，包括用户id、应用id、密钥、时间戳、请求方式、请求url等，都封装在config中，方便调用与保密；然后根据官方文档的要求：
+
+date参数是GMT格式，那么我们js刚好有toGMTString()方法，可以直接调用生成；
+```js
+const date = new Date().toGMTString();
+```
+
+接着是authorization参数，根据官方文档可以看到首先是tmp字符串的拼接，需要host、date、请求方式GET /v1.1/chat HTTP/1.1；对于js可以直接使用模版字符串实现：
+```js
+const host = new URL(url).host;
+const date = new Date().toGMTString();
+......
+const signatureOrigin = `host: ${host}\ndate: ${date}\nGET /v4.0/chat HTTP/1.1`;
+```
+
+然后是利用hmac-sha256算法结合APISecret对上一步的tmp签名，并进行base64编码生成signature
+```js
+const apiSecret = this.apiSecret;
+......
+const signatureOrigin = `host: ${host}\ndate: ${date}\nGET /v4.0/chat HTTP/1.1`;
+const signatureSha = CryptoJS.HmacSHA256(signatureOrigin, apiSecret);
+const signature = CryptoJS.enc.Base64.stringify(signatureSha);
+```
+
+然后利用signature，拼接字符串生成authorization_origin，这里在上面提前定义，写起来简约美观一些；然后将authorization_origin进行base64编码生成最终的authorization
+```js
+const algorithm = 'hmac-sha256';
+const headers = 'host date request-line';
+......
+const signature = CryptoJS.enc.Base64.stringify(signatureSha);
+const authorizationOrigin = `api_key="${apiKey}", algorithm="${algorithm}", headers="${headers}", signature="${signature}"`;
+const authorization = Buffer.from(authorizationOrigin).toString('base64');
+```
+
+最后得到所有需要的信息，拼接就能得到最终url，当然，作为url参数，需要encodeURIComponent编码一下
+```js
+const finalUrl = `${url}?authorization=${encodeURIComponent(authorization)}&date=${encodeURIComponent(date)}&host=${encodeURIComponent(host)}`;
+```
+
+#### 请求大模型
+<span style="color:green">**请求参数的配置——对话内容**</span>
+
+有了url建立websocket连接，可以发送请求和接收响应了，但在此之前我们需要准备一下请求参数(对话内容)，这部分在另一个[官方文档](https://www.xfyun.cn/doc/spark/Web.html#_1-%E6%8E%A5%E5%8F%A3%E8%AF%B4%E6%98%8E)中，这部分内容很简单，直接贴官方示例：
+```
+3.1 请求示例
+# 参数构造示例如下
+{
+        "header": {
+            "app_id": "12345",
+            "uid": "12345"
+        },
+        "parameter": {
+            "chat": {
+                "domain": "generalv3.5",
+                "temperature": 0.5,
+                "max_tokens": 1024, 
+            }
+        },
+        "payload": {
+            "message": {
+                # 如果想获取结合上下文的回答，需要开发者每次将历史问答信息一起传给服务端，如下示例
+                # 注意：text里面的所有content内容加一起的tokens需要控制在8192以内，开发者如有较长对话需求，需要适当裁剪历史信息
+                "text": [
+                    #如果传入system参数，需要保证第一条是system
+                    {"role":"system","content":"你现在扮演李白，你豪情万丈，狂放不羁；接下来请用李白的口吻和用户对话。"} #设置对话背景或者模型角色
+                    {"role": "user", "content": "你是谁"} # 用户的历史问题
+                    {"role": "assistant", "content": "....."}  # AI的历史回答结果
+                    # ....... 省略的历史对话
+                    {"role": "user", "content": "你会做什么"}  # 最新的一条问题，如无需上下文，可只传最新一条问题
+                ]
+        }
+    }
+}
+```
+根据需要我们进行配置，参数的意思在官方文档有详解，这里大致了解一下：
+
+首先需要的就是appid，这个我们已经封装在config中，直接调用；uid非必填，随便用时间生成都行；
+
+parameter.chat部分主要配置模型相关参数，
+- `domain: '4.0Ultra',`表示我们使用的是4.0Ultra模型；
+- temperature是核采样阈值：取值越高随机性越强，即相同的问题得到的不同答案的可能性越大；取值范围 (0，1] ，默认值0.5；
+- max_tokens很好理解，就是模型回答的tokens的最大长度；
+
+payload.message.text部分就是提示词：
+
+- role必填，很好理解是角色，system用于设置对话背景（仅Max、Ultra版本支持）；user表示是用户的问题；assistant表示AI的回复
+- content是用户和AI的对话内容
+```js
+text: [
+  {
+    role: 'system',
+    content: '你是一个会议摘要助手，需要根据语音转写记录和白板内容生成会议摘要，包括核心结论、待办事项等。'
+  },
+  {
+    role: 'user',
+    content: `请根据以下内容生成会议摘要：\n\n语音转写记录：${transcriptionHistory}\n\n白板内容：${whiteboardContent}`
+  }
+]
+```
+像我们这里就配置了对话背景；然后配置用户问题，将前端传过来的语音转写记录，白板内容拼接起来，作为用户问题发送给大模型；
+
+<span style="color:green">**websocket连接**</span>
+
+到这里我们就完成了请求参数的配置，接下来就是建立websocket连接发送请求和接收响应了。直接根据url连接，将请求参数(对话内容)直接发送；
+```js
+// 建立WebSocket连接
+const ws = new WebSocket(wsUrl);
+
+let summary = '';
+let isComplete = false;
+
+ws.on('open', () => {
+  // 发送请求
+  ws.send(JSON.stringify(requestData));
+});
+```
+websocket连接我们已经做了不少，并不困难，主要还是需要从官方文档中了解返回数据，才知道如何处理：
+
+这是官方文档给出的响应示例
+```
+4.1响应示例
+在不返回检索信源的情况下，大模型流式返回结构如下：
+
+# 接口为流式返回，此示例为最后一次返回结果，开发者需要将接口多次返回的结果进行拼接展示
+{
+    "header":{
+        "code":0,
+        "message":"Success",
+        "sid":"cht000cb087@dx18793cd421fb894542",
+        "status":2
+    },
+    "payload":{
+        "choices":{
+            "status":2,
+            "seq":0,
+            "text":[
+                {
+                    "content":"我可以帮助你的吗？",
+                    "role":"assistant",
+                    "index":0
+                }
+            ]
+        },
+        "usage":{
+            "text":{
+                "question_tokens":4,
+                "prompt_tokens":5,
+                "completion_tokens":9,
+                "total_tokens":14
+            }
+        }
+    }
+}
+```
+参数的意思在官方文档都有详解，我这里只简要讲核心：
+- response.header.code：表示请求是否成功，0表示成功，其他值表示失败；
+- response.header.status：表示响应是否完成，取值为`[0,1,2]`；0代表首次结果；1代表中间结果；2代表最后一个结果；
+- response.payload.choices.text：是一个数组，内部对象表示大模型的回复数据结构，包含一些格式，比如role角色等，**主要关注content属性是回复的文本内容**；
+```js
+ws.on('message', (data) => {
+  try {
+    const response = JSON.parse(data);
+
+    // 处理响应
+    if (response.header.code === 0) {
+      // 提取摘要内容
+      if (response.payload && response.payload.choices && response.payload.choices.text) {
+        response.payload.choices.text.forEach(item => {
+          summary += item.content;
+        });
+      }
+
+      // 检查是否完成
+      if (response.header.status === 2) {
+        isComplete = true;
+        ws.close();
+        resolve(summary);
+      }
+    } else {
+      console.error('API Error:', response.header.message);
+      ws.close();
+      reject(new Error(response.header.message));
+    }
+  } catch (error) {
+    console.error('Error parsing response:', error);
+  }
+});
+```
+因此我们需要做的就是判断请求是否成功，成功则从中获取回复的文本内容，再额外判断请求是否完成，完成则关闭连接，否则继续接收响应。
+
+剩下的一些关于websocket的close，error，超时处理等简单内容我们就不再讲解了，直接看上面的代码就能很好理解；那么至此这个项目所有内容都讲解完毕，大模型返回的内容前端如何处理展示在[前面](#会议摘要功能前端实现)也已经讲过，前端本身就是fetch直接从后端请求到内容，然后同步到响应式变量展示的，不再重复讲。
+
+这篇项目讲解已经写了很多内容，甚至只写在一个页面感觉有些太长了，后续也许我自己还会多次重新看，然后优化一些表达和调整格式，让它们更美观。
+
