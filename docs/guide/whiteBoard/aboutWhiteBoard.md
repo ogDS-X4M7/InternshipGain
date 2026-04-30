@@ -376,7 +376,7 @@ class MeetingRoomManager {
   }
 }
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ 服务启动: http://192.168.153.168:${PORT}`);
+  console.log(`✅ 服务启动: http://192.168.2.9:${PORT}`);
   setInterval(() => meetingRoomManager.cleanupEmptyRooms(), 5 * 60 * 1000);
 });
 ```
@@ -1465,7 +1465,7 @@ async beautifyShape() {
       strokeId: this.currentStrokeId
     };
     
-    const response = await fetch('http://192.168.153.168:8080/api/recognize-shape', {
+    const response = await fetch('http://192.168.2.9:8080/api/recognize-shape', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -1923,7 +1923,7 @@ setupWebSocket() {
   try {
     // 使用传入的roomCode建立WebSocket连接
     console.log(`与会议室${this.roomCode}建立WebSocket连接`);
-    this.socket = new WebSocket(`ws://192.168.153.168:8080?roomCode=${this.roomCode}`);
+    this.socket = new WebSocket(`ws://192.168.2.9:8080?roomCode=${this.roomCode}`);
     
     this.socket.onopen = () => {
       console.log(`与会议室${this.roomCode}的WebSocket连接成功，readyState: ${this.socket.readyState}`);
@@ -3468,7 +3468,7 @@ async generateSummary() {
       return;
     }
     
-    const response = await fetch('http://192.168.153.168:8080/api/generate-summary', {
+    const response = await fetch('http://192.168.2.9:8080/api/generate-summary', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

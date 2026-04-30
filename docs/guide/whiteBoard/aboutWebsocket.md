@@ -148,3 +148,9 @@ function sendMes() {
 - 监听`message`事件，当收到服务端消息时触发。(**消息内容存放在`e.data`中**)
 - 监听`close`事件，当连接关闭时触发。
 - 创建函数`sendMes`，用于发送消息给服务端。
+
+# socket.io的迁移使用
+
+在项目开发完毕后，发现`socket.io`基于`websocket`简化，提供了很多方便的功能。[这里](https://socketio.node.org.cn/docs/v4/)是`socket.io`的文档，可以参考学习。
+
+在

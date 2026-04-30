@@ -65,7 +65,7 @@ export default defineUserConfig({
           text: 'websocket大模型会议白板',
           collapsible: true,
           prefix: 'whiteBoard/',
-          children: ['index', 'aboutCanvas', 'aboutWebsocket', 'aboutWhiteBoard'],
+          children: ['index', 'aboutCanvas', 'aboutWebsocket', 'aboutWhiteBoard', 'aboutQues'],
         },
       ],
     },

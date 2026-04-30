@@ -126,6 +126,9 @@
 <li>监听<code v-pre>close</code>事件，当连接关闭时触发。</li>
 <li>创建函数<code v-pre>sendMes</code>，用于发送消息给服务端。</li>
 </ul>
+<h1 id="socket-io的迁移使用" tabindex="-1"><a class="header-anchor" href="#socket-io的迁移使用"><span>socket.io的迁移使用</span></a></h1>
+<p>在项目开发完毕后，发现<code v-pre>socket.io</code>基于<code v-pre>websocket</code>简化，提供了很多方便的功能。<a href="https://socketio.node.org.cn/docs/v4/" target="_blank" rel="noopener noreferrer">这里</a>是<code v-pre>socket.io</code>的文档，可以参考学习。</p>
+<p>在</p>
 </div></template>
 
 
