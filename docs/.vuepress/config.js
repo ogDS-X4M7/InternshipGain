@@ -53,7 +53,7 @@ export default defineUserConfig({
           text: '你不知道的JS摘录',
           collapsible: true,
           prefix: 'youDontKnowJS/',
-          children: ['index', 'excerpt1', 'excerpt2'],
+          children: ['index', 'excerpt1', 'excerpt2', 'excerpt3'],
         },
         {
           text: 'React + Taro 小程序简单学习',
