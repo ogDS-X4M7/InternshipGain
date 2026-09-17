@@ -1,0 +1,16 @@
+import comp from "D:/A-Front-end/A-Vuepress/InternshipGain/docs/.vuepress/.temp/pages/guide/youDontKnowJS/excerpt4-1.html.vue"
+const data = JSON.parse("{\"path\":\"/guide/youDontKnowJS/excerpt4-1.html\",\"title\":\"你不知道的JS-摘录-类型与文法-1\",\"lang\":\"zh-CN\",\"frontmatter\":{},\"headers\":[{\"level\":2,\"title\":\"摘自第一章-内建类型\",\"slug\":\"摘自第一章-内建类型\",\"link\":\"#摘自第一章-内建类型\",\"children\":[]},{\"level\":2,\"title\":\"摘自第一章-复习\",\"slug\":\"摘自第一章-复习\",\"link\":\"#摘自第一章-复习\",\"children\":[]},{\"level\":2,\"title\":\"摘自第二章-Array\",\"slug\":\"摘自第二章-array\",\"link\":\"#摘自第二章-array\",\"children\":[{\"level\":3,\"title\":\"类 Array\",\"slug\":\"类-array\",\"link\":\"#类-array\",\"children\":[]}]},{\"level\":2,\"title\":\"摘自第二章-String\",\"slug\":\"摘自第二章-string\",\"link\":\"#摘自第二章-string\",\"children\":[]},{\"level\":2,\"title\":\"摘自第二章-Number\",\"slug\":\"摘自第二章-number\",\"link\":\"#摘自第二章-number\",\"children\":[{\"level\":3,\"title\":\"小数值\",\"slug\":\"小数值\",\"link\":\"#小数值\",\"children\":[]},{\"level\":3,\"title\":\"32位（有符号）整数\",\"slug\":\"_32位-有符号-整数\",\"link\":\"#_32位-有符号-整数\",\"children\":[]}]},{\"level\":2,\"title\":\"摘自第二章-特殊值\",\"slug\":\"摘自第二章-特殊值\",\"link\":\"#摘自第二章-特殊值\",\"children\":[{\"level\":3,\"title\":\"不是值的值\",\"slug\":\"不是值的值\",\"link\":\"#不是值的值\",\"children\":[]},{\"level\":3,\"title\":\"Undefined\",\"slug\":\"undefined\",\"link\":\"#undefined\",\"children\":[]},{\"level\":3,\"title\":\"特殊的数字\",\"slug\":\"特殊的数字\",\"link\":\"#特殊的数字\",\"children\":[]},{\"level\":3,\"title\":\"特殊等价\",\"slug\":\"特殊等价\",\"link\":\"#特殊等价\",\"children\":[]}]},{\"level\":2,\"title\":\"摘自第二章-值与引用\",\"slug\":\"摘自第二章-值与引用\",\"link\":\"#摘自第二章-值与引用\",\"children\":[]},{\"level\":2,\"title\":\"摘自第二章-复习\",\"slug\":\"摘自第二章-复习\",\"link\":\"#摘自第二章-复习\",\"children\":[]},{\"level\":2,\"title\":\"摘自第三章-第三章：原生类型\",\"slug\":\"摘自第三章-第三章-原生类型\",\"link\":\"#摘自第三章-第三章-原生类型\",\"children\":[]},{\"level\":2,\"title\":\"摘自第三章-内部 [[Class]]\",\"slug\":\"摘自第三章-内部-class\",\"link\":\"#摘自第三章-内部-class\",\"children\":[]},{\"level\":2,\"title\":\"摘自第三章-封箱包装器\",\"slug\":\"摘自第三章-封箱包装器\",\"link\":\"#摘自第三章-封箱包装器\",\"children\":[{\"level\":3,\"title\":\"对象包装器的坑\",\"slug\":\"对象包装器的坑\",\"link\":\"#对象包装器的坑\",\"children\":[]}]},{\"level\":2,\"title\":\"摘自第三章-开箱\",\"slug\":\"摘自第三章-开箱\",\"link\":\"#摘自第三章-开箱\",\"children\":[]},{\"level\":2,\"title\":\"摘自第三章-原生类型作为构造器\",\"slug\":\"摘自第三章-原生类型作为构造器\",\"link\":\"#摘自第三章-原生类型作为构造器\",\"children\":[{\"level\":3,\"title\":\"Array(..)\",\"slug\":\"array\",\"link\":\"#array\",\"children\":[]},{\"level\":3,\"title\":\"Object(..)、Function(..) 和 RegExp(..)\",\"slug\":\"object-、function-和-regexp\",\"link\":\"#object-、function-和-regexp\",\"children\":[]},{\"level\":3,\"title\":\"Symbol(..)\",\"slug\":\"symbol\",\"link\":\"#symbol\",\"children\":[]},{\"level\":3,\"title\":\"原生类型原型\",\"slug\":\"原生类型原型\",\"link\":\"#原生类型原型\",\"children\":[]}]},{\"level\":2,\"title\":\"摘自第三章-复习\",\"slug\":\"摘自第三章-复习\",\"link\":\"#摘自第三章-复习\",\"children\":[]}],\"git\":{},\"filePathRelative\":\"guide/youDontKnowJS/excerpt4-1.md\"}")
+export { comp, data }
+
+if (import.meta.webpackHot) {
+  import.meta.webpackHot.accept()
+  if (__VUE_HMR_RUNTIME__.updatePageData) {
+    __VUE_HMR_RUNTIME__.updatePageData(data)
+  }
+}
+
+if (import.meta.hot) {
+  import.meta.hot.accept(({ data }) => {
+    __VUE_HMR_RUNTIME__.updatePageData(data)
+  })
+}
